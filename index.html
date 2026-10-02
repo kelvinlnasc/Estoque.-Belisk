@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belisk — Validador de Estoque</title>
+<style>
+  :root{
+    --ink:#161B22;
+    --steel:#22314A;
+    --steel-2:#2E4266;
+    --accent:#3E6FBF;
+    --accent-2:#7A9BD1;
+    --paper:#F3F1EB;
+    --panel:#FFFFFF;
+    --line:#DEDBD1;
+    --muted:#6B7280;
+    --ok-bg:#E3F1E6;
+    --ok-fg:#1E7A3D;
+    --ok-line:#9CC9A9;
+    --bad-bg:#FBE7E7;
+    --bad-fg:#B3272C;
+    --bad-line:#E3A0A3;
+    --none-bg:#EDEDED;
+    --none-fg:#6B7280;
+    --none-line:#D3D3D3;
+    --amber:#F2C14E;
+    --amber-ink:#5C4400;
+    --red:#D9534F;
+    --green:#4E9A5D;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.45;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+  /* ---------- HEADER ---------- */
+  header.hero{
+    background:linear-gradient(135deg,var(--steel) 0%, var(--steel-2) 65%, var(--accent) 130%);
+    color:#EDF1F8;
+    border-radius:14px;
+    padding:30px 32px;
+    margin-bottom:26px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:24px;
+    flex-wrap:wrap;
+    position:relative;
+    overflow:hidden;
+  }
+  header.hero::before{
+    content:"";
+    position:absolute;top:-40px;right:-40px;width:220px;height:220px;
+    background:repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 10px, transparent 10px 20px);
+    border-radius:50%;
+  }
+  header.hero .title-block{position:relative;z-index:1;}
+  header.hero h1{
+    margin:0 0 6px;
+    font-size:28px;
+    letter-spacing:0.2px;
+    font-weight:700;
+  }
+  header.hero p{margin:0;color:#C9D5EA;font-size:14px;max-width:520px;}
+  header.hero .badge{
+    position:relative;z-index:1;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:10px;
+    padding:12px 16px;
+    font-size:13px;
+    color:#EDF1F8;
+    text-align:right;
+    min-width:190px;
+  }
+  header.hero .badge strong{display:block;font-size:15px;margin-bottom:2px;}
+
+  /* ---------- SECTION TITLES ---------- */
+  h2.section-title{
+    font-size:15px;
+    text-transform:none;
+    color:var(--steel);
+    margin:36px 0 14px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  h2.section-title .line{flex:1;height:1px;background:var(--line);}
+
+  /* ---------- KPI CARDS ---------- */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+  }
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    min-height:88px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:4px;
+  }
+  .kpi .label{font-size:12px;color:var(--muted);font-weight:600;}
+  .kpi .value{font-size:21px;font-weight:700;color:var(--ink);}
+  .kpi .caption{font-size:11px;color:var(--muted);}
+  .kpi.amber{background:var(--amber);border-color:#DDB233;}
+  .kpi.amber .label,.kpi.amber .value,.kpi.amber .caption{color:var(--amber-ink);}
+  .kpi.red{background:#E9605C;border-color:#C94743;}
+  .kpi.red .label,.kpi.red .value,.kpi.red .caption{color:#fff;}
+  .kpi.green{background:#79B37E;border-color:#5A9761;}
+  .kpi.green .label,.kpi.green .value,.kpi.green .caption{color:#0F3418;}
+
+  @media (max-width:920px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .kpi-grid{grid-template-columns:1fr;} }
+
+  /* ---------- PANEL / TABLE ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px;
+  }
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+    align-items:center;
+  }
+  .toolbar input[type=text]{
+    flex:1;
+    min-width:220px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    background:#FBFAF7;
+  }
+  .toolbar select{
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    background:#FBFAF7;
+  }
+  .toolbar .count-pill{
+    font-size:12px;
+    color:var(--muted);
+    padding:8px 4px;
+    white-space:nowrap;
+  }
+
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px;}
+  thead th{
+    background:var(--steel);
+    color:#EDF1F8;
+    text-align:left;
+    padding:10px 10px;
+    font-weight:600;
+    white-space:nowrap;
+    position:sticky;
+    top:0;
+  }
+  thead th.num, td.num{text-align:right;}
+  tbody td{
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  tbody tr:hover{background:#F7F5EF;}
+  tbody tr:nth-child(even){background:#FCFBF8;}
+  tbody tr:nth-child(even):hover{background:#F5F3EC;}
+  td.codigo{font-family: "Consolas", "SFMono-Regular", Menlo, monospace; font-weight:600; color:var(--steel-2);}
+  .pill{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    border:1px solid transparent;
+  }
+  .pill.ok{background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-line);}
+  .pill.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--bad-line);}
+  .pill.none{background:var(--none-bg);color:var(--none-fg);border-color:var(--none-line);}
+  .empty-row td{text-align:center;color:var(--muted);padding:26px;}
+
+  /* ---------- UPLOAD PANEL ---------- */
+  .upload-panel{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .dropzone{
+    flex:1;
+    min-width:260px;
+    border:2px dashed var(--accent-2);
+    border-radius:10px;
+    padding:22px;
+    text-align:center;
+    background:#F6F8FC;
+    color:var(--steel-2);
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:#EEF3FB;
+  }
+  .dropzone .dz-title{font-weight:700;font-size:14px;margin-bottom:4px;}
+  .dropzone .dz-sub{font-size:12px;color:var(--muted);}
+  .upload-actions{display:flex;flex-direction:column;gap:10px;min-width:200px;}
+  button.btn{
+    padding:10px 16px;
+    border-radius:8px;
+    border:1px solid var(--accent);
+    background:var(--accent);
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  button.btn.secondary{
+    background:transparent;
+    color:var(--steel-2);
+    border-color:var(--line);
+  }
+  button.btn:disabled{opacity:.5;cursor:not-allowed;}
+  .file-status{font-size:12px;color:var(--muted);}
+  .status-banner{
+    margin-top:14px;
+    padding:11px 14px;
+    border-radius:8px;
+    font-size:13px;
+    display:none;
+  }
+  .status-banner.show{display:block;}
+  .status-banner.success{background:var(--ok-bg);color:var(--ok-fg);border:1px solid var(--ok-line);}
+  .status-banner.error{background:var(--bad-bg);color:var(--bad-fg);border:1px solid var(--bad-line);}
+
+  footer.note{
+    margin-top:30px;
+    font-size:11.5px;
+    color:var(--muted);
+    text-align:center;
+  }
+
+  .data-source-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    color:var(--muted);
+    background:#EFEDE5;
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px 10px;
+    margin-bottom:10px;
+  }
+  .data-source-tag .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="title-block">
+      <h1>Belisk · Validador de Estoque</h1>
+      <p>Confere entradas e saídas dos Movimentos, cruza os saldos do TR3 e do EVO, e audita as posições de paletes — tudo num único painel.</p>
+    </div>
+    <div class="badge" id="headerBadge">
+      <strong id="badgeSourceLabel">Arquivo carregado</strong>
+      <span id="badgeFileName">Saldo - BILISC - atual.xlsx</span>
+    </div>
+  </header>
+
+  <span class="data-source-tag"><span class="dot"></span><span id="sourceTagText">Exibindo dados do arquivo enviado nesta conversa</span></span>
+
+  <h2 class="section-title">Visão geral<span class="line"></span></h2>
+  <div class="kpi-grid" id="kpiGrid"><!-- cards injetados via JS --></div>
+
+  <h2 class="section-title">Validação Movimentos × TR3 × EVO<span class="line"></span></h2>
+  <div class="panel">
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Buscar por código ou descrição...">
+      <select id="statusFilter">
+        <option value="todos">Todos os status</option>
+        <option value="ok">Somente OK</option>
+        <option value="bad">Somente Divergência</option>
+        <option value="none">Sem referência TR3/EVO</option>
+      </select>
+      <span class="count-pill" id="rowCountLabel"></span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Nosso Código</th>
+            <th>Descrição</th>
+            <th class="num">QTD por caixa</th>
+            <th class="num">Num de caixas</th>
+            <th class="num">QTD Total</th>
+            <th class="num">Valor Unit</th>
+            <th class="num">Valor Total</th>
+            <th class="num">Saldo TR3</th>
+            <th class="num">Saldo EVO</th>
+            <th class="num">Diferença</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2 class="section-title">Validar novo arquivo (mesmo modelo)<span class="line"></span></h2>
+  <div class="panel">
+    <div class="upload-panel">
+      <div class="dropzone" id="dropzone">
+        <div class="dz-title">Arraste o arquivo .xlsx aqui ou clique para selecionar</div>
+        <div class="dz-sub">Precisa conter as abas: Movimentos, Posições Paletes, Saldo TR3 e Saldo EVO — mesmo layout do arquivo atual.</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+      </div>
+      <div class="upload-actions">
+        <div class="file-status" id="fileStatus">Nenhum arquivo selecionado.</div>
+        <button class="btn" id="processBtn" disabled>Processar arquivo</button>
+        <button class="btn secondary" id="resetBtn">Voltar para o arquivo atual</button>
+      </div>
+    </div>
+    <div class="status-banner" id="statusBanner"></div>
+  </div>
+
+  <footer class="note">
+    Diferença = Saldo TR3 − Saldo EVO. Status "Sem referência" indica um código presente nos Movimentos sem correspondência cadastrada em TR3/EVO (ex.: peças de reposição e tags internos).
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const EMBEDDED_DATA = {"movimentos": [{"data": "20/03/2026", "fornecedor": "6376", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "numCaixas": 125, "qtdTotal": 5000, "valorUnit": 29.9, "valorTotal": 149500, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "SVM1894-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG10801", "qtdCaixa": 1000, "numCaixas": 25, "qtdTotal": 25000, "valorUnit": 2.4, "valorTotal": 60000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "SVM1894-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG10810", "qtdCaixa": 1000, "numCaixas": 25, "qtdTotal": 25000, "valorUnit": 2.4, "valorTotal": 60000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "N50044-44", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "numCaixas": 200, "qtdTotal": 10000, "valorUnit": 12.89, "valorTotal": 128900, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "47120", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "numCaixas": 500, "qtdTotal": 10000, "valorUnit": 26, "valorTotal": 260000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C10114", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Branca", "codigo": "BG15501", "qtdCaixa": 50, "numCaixas": 20, "qtdTotal": 1000, "valorUnit": 35, "valorTotal": 35000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C10114", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "numCaixas": 80, "qtdTotal": 4000, "valorUnit": 35, "valorTotal": 140000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "8286", "descricao": "Base de recarga sem fio / USB - Bambu", "cor": "Unica", "codigo": "BG160", "qtdCaixa": 50, "numCaixas": 40, "qtdTotal": 2000, "valorUnit": 55, "valorTotal": 110000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "AH0069", "descricao": "USB HUB em Aluminio para Notebooks", "cor": "Unica", "codigo": "BG171", "qtdCaixa": 200, "numCaixas": 25, "qtdTotal": 5000, "valorUnit": 20, "valorTotal": 100000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Azul", "codigo": "BG18803", "qtdCaixa": 36, "numCaixas": 28, "qtdTotal": 1000, "valorUnit": 19.9, "valorTotal": 19900, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Preta", "codigo": "BG18810", "qtdCaixa": 36, "numCaixas": 56, "qtdTotal": 2000, "valorUnit": 19.9, "valorTotal": 39800, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C70143", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Azul", "codigo": "BG18903", "qtdCaixa": 36, "numCaixas": 28, "qtdTotal": 1000, "valorUnit": 22.9, "valorTotal": 22900, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "C70143", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Preta", "codigo": "BG18910", "qtdCaixa": 36, "numCaixas": 56, "qtdTotal": 2000, "valorUnit": 22.9, "valorTotal": 45800, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG19201", "qtdCaixa": 500, "numCaixas": 20, "qtdTotal": 10000, "valorUnit": 4.5, "valorTotal": 45000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Azul", "codigo": "BG19203", "qtdCaixa": 500, "numCaixas": 10, "qtdTotal": 5000, "valorUnit": 4.5, "valorTotal": 22500, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG19210", "qtdCaixa": 500, "numCaixas": 20, "qtdTotal": 10000, "valorUnit": 4.5, "valorTotal": 45000, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "SVH6511", "descricao": "Marca-Texto 3 Cores", "cor": "Unica", "codigo": "BG193", "qtdCaixa": 500, "numCaixas": 6, "qtdTotal": 3000, "valorUnit": 4.5, "valorTotal": 13500, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "6335", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "numCaixas": 50, "qtdTotal": 2500, "valorUnit": 19.9, "valorTotal": 49750, "tipo": "Entrada"}, {"data": "20/03/2026", "fornecedor": "6335", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "numCaixas": 50, "qtdTotal": 2500, "valorUnit": 19.9, "valorTotal": 49750, "tipo": "Entrada"}, {"data": "23/03/2026", "fornecedor": "6376", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "numCaixas": 20, "qtdTotal": 800, "valorUnit": 29.9, "valorTotal": 23920, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "SVM1894-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG10801", "qtdCaixa": 1000, "numCaixas": 5, "qtdTotal": 5000, "valorUnit": 2.4, "valorTotal": 12000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "SVM1894-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG10810", "qtdCaixa": 1000, "numCaixas": 5, "qtdTotal": 5000, "valorUnit": 2.4, "valorTotal": 12000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "N50044-44", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "numCaixas": 20, "qtdTotal": 1000, "valorUnit": 12.89, "valorTotal": 12890, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "47120", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "numCaixas": 50, "qtdTotal": 1000, "valorUnit": 26, "valorTotal": 26000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C10114", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Branca", "codigo": "BG15501", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 35, "valorTotal": 17500, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C10114", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "numCaixas": 20, "qtdTotal": 1000, "valorUnit": 35, "valorTotal": 35000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "8286", "descricao": "Base de recarga sem fio / USB - Bambu", "cor": "Unica", "codigo": "BG160", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 55, "valorTotal": 27500, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "AH0069", "descricao": "USB HUB em Aluminio para Notebooks", "cor": "Unica", "codigo": "BG171", "qtdCaixa": 200, "numCaixas": 5, "qtdTotal": 1000, "valorUnit": 20, "valorTotal": 20000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Azul", "codigo": "BG18803", "qtdCaixa": 36, "numCaixas": 10, "qtdTotal": 360, "valorUnit": 19.9, "valorTotal": 7163.999999999999, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Preta", "codigo": "BG18810", "qtdCaixa": 36, "numCaixas": 10, "qtdTotal": 360, "valorUnit": 19.9, "valorTotal": 7163.999999999999, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C70143", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Azul", "codigo": "BG18903", "qtdCaixa": 36, "numCaixas": 10, "qtdTotal": 360, "valorUnit": 22.9, "valorTotal": 8244, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "C70143", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Preta", "codigo": "BG18910", "qtdCaixa": 36, "numCaixas": 10, "qtdTotal": 360, "valorUnit": 22.9, "valorTotal": 8244, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG19201", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 4.5, "valorTotal": 9000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Azul", "codigo": "BG19203", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 4.5, "valorTotal": 4500, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "1187-A-I", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG19210", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 4.5, "valorTotal": 9000, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "SVH6511", "descricao": "Marca-Texto 3 Cores", "cor": "Unica", "codigo": "BG193", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 4.5, "valorTotal": 4500, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "6335", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 19.9, "valorTotal": 9950, "tipo": "Saida"}, {"data": "23/03/2026", "fornecedor": "6335", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 19.9, "valorTotal": 9950, "tipo": "Saida"}, {"data": "26/03/2026", "fornecedor": "HL7634", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "numCaixas": 250, "qtdTotal": 10000, "valorUnit": 35, "valorTotal": 350000, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "BRANCO", "codigo": "BG16101", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "AZUL", "codigo": "BG16103", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERMELHO", "codigo": "BG16104", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERDE", "codigo": "BG16108", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRATA", "codigo": "BG16109", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRETO", "codigo": "BG16110", "qtdCaixa": 2500, "numCaixas": 40, "qtdTotal": 100000, "valorUnit": 0.85, "valorTotal": 85000, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL7904", "descricao": "Cordao de pescoco para Celular", "cor": "Única", "codigo": "BG165", "qtdCaixa": 400, "numCaixas": 50, "qtdTotal": 20000, "valorUnit": 12, "valorTotal": 240000, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "HL7884", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "numCaixas": 417, "qtdTotal": 10008, "valorUnit": 21.9, "valorTotal": 219175.19999999998, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "G187", "descricao": "Aquecedor de Caneca (c/caneca) e Recarga Wireless", "cor": "Unica", "codigo": "BG187", "qtdCaixa": 24, "numCaixas": 42, "qtdTotal": 1008, "valorUnit": 99, "valorTotal": 99792, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "G190", "descricao": "Suporte de Bolsa para mesas", "cor": "Unica", "codigo": "BG190", "qtdCaixa": 400, "numCaixas": 13, "qtdTotal": 5000, "valorUnit": 8.5, "valorTotal": 42500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "G191", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "numCaixas": 125, "qtdTotal": 5000, "valorUnit": 20.9, "valorTotal": 104500, "tipo": "Entrada"}, {"data": "26/03/2026", "fornecedor": "G208", "descricao": "Necessaire 15x26", "cor": "Unica", "codigo": "BG208", "qtdCaixa": 100, "numCaixas": 60, "qtdTotal": 6000, "valorUnit": 11.9, "valorTotal": 71400, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "HL7893", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "numCaixas": 125, "qtdTotal": 3000, "valorUnit": 42.9, "valorTotal": 128700, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "HL6800", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "numCaixas": 67, "qtdTotal": 2010, "valorUnit": 59, "valorTotal": 118590, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10510-700", "descricao": "Garrafa 700ml", "cor": "BRANCO", "codigo": "BG20301", "qtdCaixa": 50, "numCaixas": 30, "qtdTotal": 1500, "valorUnit": 44.9, "valorTotal": 67350, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10510-700", "descricao": "Garrafa 700ml", "cor": "PRETO", "codigo": "BG20310", "qtdCaixa": 50, "numCaixas": 30, "qtdTotal": 1500, "valorUnit": 44.9, "valorTotal": 67350, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10704A", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "numCaixas": 50, "qtdTotal": 1500, "valorUnit": 49.9, "valorTotal": 74850, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10704A", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "numCaixas": 50, "qtdTotal": 1500, "valorUnit": 49.9, "valorTotal": 74850, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10785", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "numCaixas": 60, "qtdTotal": 1500, "valorUnit": 54.9, "valorTotal": 82350, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "C10785", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "numCaixas": 60, "qtdTotal": 1500, "valorUnit": 54.9, "valorTotal": 82350, "tipo": "Entrada"}, {"data": "27/03/2026", "fornecedor": "HL7634", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "numCaixas": 25, "qtdTotal": 1000, "valorUnit": 35, "valorTotal": 35000, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL7893", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "numCaixas": 20, "qtdTotal": 480, "valorUnit": 42.9, "valorTotal": 20592, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL6800", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "numCaixas": 7, "qtdTotal": 210, "valorUnit": 59, "valorTotal": 12390, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "BRANCO", "codigo": "BG16101", "qtdCaixa": 2500, "numCaixas": 1, "qtdTotal": 2500, "valorUnit": 0.85, "valorTotal": 2125, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "AZUL", "codigo": "BG16103", "qtdCaixa": 2500, "numCaixas": 1, "qtdTotal": 2500, "valorUnit": 0.85, "valorTotal": 2125, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERMELHO", "codigo": "BG16104", "qtdCaixa": 2500, "numCaixas": 1, "qtdTotal": 2500, "valorUnit": 0.85, "valorTotal": 2125, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERDE", "codigo": "BG16108", "qtdCaixa": 2500, "numCaixas": 1, "qtdTotal": 2500, "valorUnit": 0.85, "valorTotal": 2125, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRATA", "codigo": "BG16109", "qtdCaixa": 2500, "numCaixas": 1, "qtdTotal": 2500, "valorUnit": 0.85, "valorTotal": 2125, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRETO", "codigo": "BG16110", "qtdCaixa": 2500, "numCaixas": 2, "qtdTotal": 5000, "valorUnit": 0.85, "valorTotal": 4250, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL7904", "descricao": "Cordao de pescoco para Celular", "cor": "Unica", "codigo": "BG165", "qtdCaixa": 400, "numCaixas": 5, "qtdTotal": 2000, "valorUnit": 12, "valorTotal": 24000, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "HL7884", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "numCaixas": 40, "qtdTotal": 960, "valorUnit": 21.9, "valorTotal": 21024, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "G187", "descricao": "Aquecedor de Caneca (c/caneca) e Recarga Wireless", "cor": "Unica", "codigo": "BG187", "qtdCaixa": 24, "numCaixas": 8, "qtdTotal": 192, "valorUnit": 99, "valorTotal": 19008, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "G190", "descricao": "Suporte de Bolsa para mesas", "cor": "Unica", "codigo": "BG190", "qtdCaixa": 400, "numCaixas": 3, "qtdTotal": 1200, "valorUnit": 8.5, "valorTotal": 10200, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "G191", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "numCaixas": 10, "qtdTotal": 400, "valorUnit": 20.9, "valorTotal": 8360, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10510-700", "descricao": "Garrafa 700ml", "cor": "BRANCO", "codigo": "BG20301", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 44.9, "valorTotal": 22450, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10510-700", "descricao": "Garrafa 700ml", "cor": "PRETO", "codigo": "BG20310", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 44.9, "valorTotal": 22450, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10704A", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "numCaixas": 10, "qtdTotal": 300, "valorUnit": 49.9, "valorTotal": 14970, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10704A", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "numCaixas": 10, "qtdTotal": 300, "valorUnit": 49.9, "valorTotal": 14970, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10785", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "numCaixas": 10, "qtdTotal": 250, "valorUnit": 54.9, "valorTotal": 13725, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "C10785", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "numCaixas": 10, "qtdTotal": 250, "valorUnit": 54.9, "valorTotal": 13725, "tipo": "Saida"}, {"data": "27/03/2026", "fornecedor": "G208", "descricao": "Necessaire 15x26", "cor": "Unica", "codigo": "BG208", "qtdCaixa": 100, "numCaixas": 0, "qtdTotal": 0, "valorUnit": "#DIV/0!", "valorTotal": 0, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "BRANCO", "codigo": "BG13101", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 7.15, "valorTotal": 14300, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "CINZA", "codigo": "BG13102", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 7.15, "valorTotal": 14300, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "AZUL", "codigo": "BG13103", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 7.15, "valorTotal": 14300, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "PRETO", "codigo": "BG13110", "qtdCaixa": 500, "numCaixas": 18, "qtdTotal": 9000, "valorUnit": 7.15, "valorTotal": 64350, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "CR019", "descricao": "Chaveiro Mosquetao Retratil", "cor": "BRANCO", "codigo": "BG17801", "qtdCaixa": 500, "numCaixas": 10, "qtdTotal": 5000, "valorUnit": 8.5, "valorTotal": 42500, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "CR019", "descricao": "Chaveiro Mosquetao Retratil", "cor": "PRETO", "codigo": "BG17810", "qtdCaixa": 500, "numCaixas": 30, "qtdTotal": 15000, "valorUnit": 8.5, "valorTotal": 127500, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "BRANCO", "codigo": "BG17901", "qtdCaixa": 350, "numCaixas": 6, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "CINZA", "codigo": "BG17902", "qtdCaixa": 350, "numCaixas": 6, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "AZUL", "codigo": "BG17903", "qtdCaixa": 350, "numCaixas": 6, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "PRETO", "codigo": "BG17910", "qtdCaixa": 350, "numCaixas": 26, "qtdTotal": 9000, "valorUnit": 9.9, "valorTotal": 89100, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "BRANCO", "codigo": "BG18001", "qtdCaixa": 250, "numCaixas": 8, "qtdTotal": 2000, "valorUnit": 15.5, "valorTotal": 31000, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "CINZA", "codigo": "BG18002", "qtdCaixa": 250, "numCaixas": 8, "qtdTotal": 2000, "valorUnit": 15.5, "valorTotal": 31000, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "AZUL", "codigo": "BG18003", "qtdCaixa": 250, "numCaixas": 8, "qtdTotal": 2000, "valorUnit": 15.5, "valorTotal": 31000, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "PRETO", "codigo": "BG18010", "qtdCaixa": 250, "numCaixas": 36, "qtdTotal": 9000, "valorUnit": 15.5, "valorTotal": 139500, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "CINZA", "codigo": "BG18102", "qtdCaixa": 400, "numCaixas": 5, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "AZUL", "codigo": "BG18103", "qtdCaixa": 400, "numCaixas": 5, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "PRETO", "codigo": "BG18110", "qtdCaixa": 400, "numCaixas": 5, "qtdTotal": 2000, "valorUnit": 9.9, "valorTotal": 19800, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23022", "descricao": "Chaveiro Bambu", "cor": "UNICA", "codigo": "BG182", "qtdCaixa": 500, "numCaixas": 6, "qtdTotal": 3000, "valorUnit": 9.9, "valorTotal": 29700, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "CINZA", "codigo": "BG18302", "qtdCaixa": 300, "numCaixas": 10, "qtdTotal": 3000, "valorUnit": 14.9, "valorTotal": 44700, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "AZUL", "codigo": "BG18303", "qtdCaixa": 300, "numCaixas": 10, "qtdTotal": 3000, "valorUnit": 14.9, "valorTotal": 44700, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "PRETO", "codigo": "BG18310", "qtdCaixa": 300, "numCaixas": 13, "qtdTotal": 4000, "valorUnit": 14.9, "valorTotal": 59600, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "L0010+T0187", "descricao": "Conjunto de Café com Coador e Bule", "cor": "UNICA", "codigo": "BG195", "qtdCaixa": 18, "numCaixas": 56, "qtdTotal": 1008, "valorUnit": 64.9, "valorTotal": 65419.200000000004, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "PC037", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "numCaixas": 84, "qtdTotal": 504, "valorUnit": 279, "valorTotal": 140616, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "P1269-4", "descricao": "Prensa Francesa Parede Dupla 350ml", "cor": "UNICA", "codigo": "BG197", "qtdCaixa": 12, "numCaixas": 84, "qtdTotal": 1008, "valorUnit": 79.9, "valorTotal": 80539.20000000001, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "P1360-4", "descricao": "Prensa Francesa Tampa de Bambu 600ml", "cor": "UNICA", "codigo": "BG198", "qtdCaixa": 24, "numCaixas": 42, "qtdTotal": 1008, "valorUnit": 47.9, "valorTotal": 48283.2, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "Partes BG195", "descricao": "Partes para reposicao BG195 - Garantia", "cor": "UNICA", "codigo": "Partes", "qtdCaixa": 150, "numCaixas": 1, "qtdTotal": 150, "valorUnit": 0, "valorTotal": 0, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "TAGs", "descricao": "Tags para reposicao se precisar", "cor": "UNICA", "codigo": "TAGs", "qtdCaixa": 1000, "numCaixas": 1, "qtdTotal": 1000, "valorUnit": 0, "valorTotal": 0, "tipo": "Entrada"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "BRANCO", "codigo": "BG13101", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 7.15, "valorTotal": 7150, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "CINZA", "codigo": "BG13102", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 7.15, "valorTotal": 7150, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "AZUL", "codigo": "BG13103", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 7.15, "valorTotal": 7150, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "PRETO", "codigo": "BG13110", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 7.15, "valorTotal": 14300, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "CR019", "descricao": "Chaveiro Mosquetao Retratil", "cor": "BRANCO", "codigo": "BG17801", "qtdCaixa": 500, "numCaixas": 4, "qtdTotal": 2000, "valorUnit": 8.5, "valorTotal": 17000, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "CR019", "descricao": "Chaveiro Mosquetao Retratil", "cor": "PRETO", "codigo": "BG17810", "qtdCaixa": 500, "numCaixas": 6, "qtdTotal": 3000, "valorUnit": 8.5, "valorTotal": 25500, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "BRANCO", "codigo": "BG17901", "qtdCaixa": 350, "numCaixas": 2, "qtdTotal": 700, "valorUnit": 9.9, "valorTotal": 6930, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "CINZA", "codigo": "BG17902", "qtdCaixa": 350, "numCaixas": 2, "qtdTotal": 700, "valorUnit": 9.9, "valorTotal": 6930, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "AZUL", "codigo": "BG17903", "qtdCaixa": 350, "numCaixas": 5, "qtdTotal": 1650, "valorUnit": 9.9, "valorTotal": 16335, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250001", "descricao": "Cordao de Pulso para Celular", "cor": "PRETO", "codigo": "BG17910", "qtdCaixa": 350, "numCaixas": 4, "qtdTotal": 1400, "valorUnit": 9.9, "valorTotal": 13860, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "BRANCO", "codigo": "BG18001", "qtdCaixa": 250, "numCaixas": 6, "qtdTotal": 1000, "valorUnit": 15.5, "valorTotal": 15500, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "CINZA", "codigo": "BG18002", "qtdCaixa": 250, "numCaixas": 4, "qtdTotal": 1000, "valorUnit": 15.5, "valorTotal": 15500, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "AZUL", "codigo": "BG18003", "qtdCaixa": 250, "numCaixas": 4, "qtdTotal": 1000, "valorUnit": 15.5, "valorTotal": 15500, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250002", "descricao": "Cordao de Pescoco para Celular", "cor": "PRETO", "codigo": "BG18010", "qtdCaixa": 250, "numCaixas": 4, "qtdTotal": 1500, "valorUnit": 15.5, "valorTotal": 23250, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "CINZA", "codigo": "BG18102", "qtdCaixa": 400, "numCaixas": 2, "qtdTotal": 800, "valorUnit": 9.9, "valorTotal": 7920, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "AZUL", "codigo": "BG18103", "qtdCaixa": 400, "numCaixas": 2, "qtdTotal": 800, "valorUnit": 9.9, "valorTotal": 7920, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23020", "descricao": "Chaveiro", "cor": "PRETO", "codigo": "BG18110", "qtdCaixa": 400, "numCaixas": 2, "qtdTotal": 800, "valorUnit": 9.9, "valorTotal": 7920, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW23022", "descricao": "Chaveiro Bambu", "cor": "UNICA", "codigo": "BG182", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 9.9, "valorTotal": 9900, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "CINZA", "codigo": "BG18302", "qtdCaixa": 300, "numCaixas": 3, "qtdTotal": 900, "valorUnit": 14.9, "valorTotal": 13410, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "AZUL", "codigo": "BG18303", "qtdCaixa": 300, "numCaixas": 3, "qtdTotal": 900, "valorUnit": 14.9, "valorTotal": 13410, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "PRETO", "codigo": "BG18310", "qtdCaixa": 300, "numCaixas": 3, "qtdTotal": 1000, "valorUnit": 14.9, "valorTotal": 14900, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "L0010+T0187", "descricao": "Conjunto de Café com Coador e Bule", "cor": "UNICA", "codigo": "BG195", "qtdCaixa": 18, "numCaixas": 5, "qtdTotal": 90, "valorUnit": 64.9, "valorTotal": 5841.000000000001, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "PC037", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "numCaixas": 10, "qtdTotal": 60, "valorUnit": 279, "valorTotal": 16740, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "P1269-4", "descricao": "Prensa Francesa Parede Dupla 350ml", "cor": "UNICA", "codigo": "BG197", "qtdCaixa": 12, "numCaixas": 10, "qtdTotal": 120, "valorUnit": 79.9, "valorTotal": 9588, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "P1360-4", "descricao": "Prensa Francesa Tampa de Bambu 600ml", "cor": "UNICA", "codigo": "BG198", "qtdCaixa": 24, "numCaixas": 5, "qtdTotal": 120, "valorUnit": 47.9, "valorTotal": 5748, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "Partes BG195", "descricao": "Partes para reposicao BG195 - Garantia", "cor": "UNICA", "codigo": "Partes", "qtdCaixa": 150, "numCaixas": 1, "qtdTotal": 150, "valorUnit": 0, "valorTotal": 0, "tipo": "Saida"}, {"data": "06/04/2026", "fornecedor": "TAGs", "descricao": "Tags para reposicao se precisar", "cor": "UNICA", "codigo": "TAGs", "qtdCaixa": 1000, "numCaixas": 1, "qtdTotal": 1000, "valorUnit": 0, "valorTotal": 0, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "DZ001", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "numCaixas": 40, "qtdTotal": 4000, "valorUnit": 17.01, "valorTotal": 68040, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCB037", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "BRANCA", "codigo": "BG19901", "qtdCaixa": 30, "numCaixas": 17, "qtdTotal": 510, "valorUnit": 22, "valorTotal": 11220, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCK019", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "PRETA", "codigo": "BG19910", "qtdCaixa": 30, "numCaixas": 50, "qtdTotal": 1500, "valorUnit": 22, "valorTotal": 33000, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCB038", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "BRANCA", "codigo": "BG20001", "qtdCaixa": 30, "numCaixas": 34, "qtdTotal": 1020, "valorUnit": 27, "valorTotal": 27540, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCK020", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "numCaixas": 100, "qtdTotal": 3000, "valorUnit": 27, "valorTotal": 81000, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCB039", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "BRANCA", "codigo": "BG20101", "qtdCaixa": 30, "numCaixas": 17, "qtdTotal": 510, "valorUnit": 32, "valorTotal": 16320, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "QCK021", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 50, "qtdTotal": 1500, "valorUnit": 32, "valorTotal": 48000, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRATA", "codigo": "BG202", "qtdCaixa": 30, "numCaixas": 50, "qtdTotal": 1500, "valorUnit": 32, "valorTotal": 48000, "tipo": "Entrada"}, {"data": "14/04/2026", "fornecedor": "DZ001", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "numCaixas": 5, "qtdTotal": 500, "valorUnit": 17.01, "valorTotal": 8505, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCB037", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "BRANCA", "codigo": "BG19901", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 22, "valorTotal": 3300, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCK019", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "PRETA", "codigo": "BG19910", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 22, "valorTotal": 3300, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCB038", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "BRANCA", "codigo": "BG20001", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 27, "valorTotal": 4050, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCK020", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 27, "valorTotal": 4050, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCB039", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "BRANCA", "codigo": "BG20101", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 32, "valorTotal": 4800, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "QCK021", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "PRATA", "codigo": "BG202", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 32, "valorTotal": 4800, "tipo": "Saida"}, {"data": "14/04/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 32, "valorTotal": 4800, "tipo": "Saida"}, {"data": "17/06/2026", "fornecedor": "RW23025", "descricao": "Cinta de Pulso para Celular", "cor": "BRANCO", "codigo": "BG13101", "qtdCaixa": 500, "numCaixas": 1, "qtdTotal": 500, "valorUnit": 7.15, "valorTotal": 3575, "tipo": "Saida"}, {"data": "17/06/2026", "fornecedor": "P1269-4", "descricao": "Prensa Francesa Parede Dupla 350ml", "cor": "UNICA", "codigo": "BG197", "qtdCaixa": 12, "numCaixas": 30, "qtdTotal": 360, "valorUnit": 79.9, "valorTotal": 28764.000000000004, "tipo": "Saida"}, {"data": "17/06/2026", "fornecedor": "QCK020", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRATA", "codigo": "BG20010", "qtdCaixa": 30, "numCaixas": 7, "qtdTotal": 210, "valorUnit": 27, "valorTotal": 5670, "tipo": "Saida"}, {"data": "17/06/2026", "fornecedor": "QCK021", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "PRATA", "codigo": "BG202", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 32, "valorTotal": 4800, "tipo": "Saida"}, {"data": "17/06/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 7, "qtdTotal": 210, "valorUnit": 32, "valorTotal": 6720, "tipo": "Saida"}, {"data": "18/06/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 15, "qtdTotal": 450, "valorUnit": 32, "valorTotal": 14400, "tipo": "Saida"}, {"data": "23/06/2026", "fornecedor": "QCK020", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "numCaixas": 6, "qtdTotal": 180, "valorUnit": 27, "valorTotal": 4860, "tipo": "Saida"}, {"data": "08/07/2026", "fornecedor": "G191", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "numCaixas": 20, "qtdTotal": 800, "valorUnit": 20.9, "valorTotal": 16720, "tipo": "Saida"}, {"data": "08/07/2026", "fornecedor": "HL6800", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "numCaixas": 7, "qtdTotal": 210, "valorUnit": 59, "valorTotal": 12390, "tipo": "Saida"}, {"data": "28/07/2026", "fornecedor": "RW250003", "descricao": "Cordao de Cracha / Celular", "cor": "AZUL", "codigo": "BG18303", "qtdCaixa": 300, "numCaixas": 4, "qtdTotal": 1200, "valorUnit": 14.9, "valorTotal": 17880, "tipo": "Saida"}, {"data": "30/07/2026", "fornecedor": "HL9205", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRETO", "codigo": "BG16110", "qtdCaixa": 2500, "numCaixas": 4, "qtdTotal": 10000, "valorUnit": 0.85, "valorTotal": 8500, "tipo": "Saida"}, {"data": "30/07/2026", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Azul", "codigo": "BG18803", "qtdCaixa": 36, "numCaixas": 10, "qtdTotal": 360, "valorUnit": 19.9, "valorTotal": 7163.999999999999, "tipo": "Saida"}, {"data": "04/08/2026", "fornecedor": "8286", "descricao": "Base de recarga sem fio / USB - Bambu", "cor": "Unica", "codigo": "BG160", "qtdCaixa": 50, "numCaixas": 10, "qtdTotal": 500, "valorUnit": 55, "valorTotal": 27500, "tipo": "Saida"}, {"data": "04/08/2026", "fornecedor": "SVH6511", "descricao": "Marca-Texto 3 Cores", "cor": "Unica", "codigo": "BG193", "qtdCaixa": 500, "numCaixas": 2, "qtdTotal": 1000, "valorUnit": 4.5, "valorTotal": 4500, "tipo": "Saida"}, {"data": "04/08/2026", "fornecedor": "PC037", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "numCaixas": 10, "qtdTotal": 60, "valorUnit": 279, "valorTotal": 16740, "tipo": "Saida"}, {"data": "04/08/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 5, "qtdTotal": 150, "valorUnit": 32, "valorTotal": 4800, "tipo": "Saida"}, {"data": "13/08/2026", "fornecedor": "DZ001", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "numCaixas": 5, "qtdTotal": 500, "valorUnit": 17.01, "valorTotal": 8505, "tipo": "Saida"}, {"data": "13/08/2026", "fornecedor": "N50044-44", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "numCaixas": 20, "qtdTotal": 1000, "valorUnit": 12.89, "valorTotal": 12890, "tipo": "Saida"}, {"data": "02/09/2026", "fornecedor": "CR019", "descricao": "Chaveiro Mosquetao Retratil", "cor": "BRANCO", "codigo": "BG17801", "qtdCaixa": 500, "numCaixas": 6, "qtdTotal": 3000, "valorUnit": 8.5, "valorTotal": 25500, "tipo": "Saida"}, {"data": "02/09/2026", "fornecedor": "DCY069", "descricao": "Caixa Papelao 1200g - Magnetico - 35x20,5x11,3cm", "cor": "PRETA", "codigo": "BG20110", "qtdCaixa": 30, "numCaixas": 18, "qtdTotal": 540, "valorUnit": 32, "valorTotal": 17280, "tipo": "Saida"}, {"data": "02/09/2026", "fornecedor": "PC037", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "numCaixas": 10, "qtdTotal": 60, "valorUnit": 279, "valorTotal": 16740, "tipo": "Saida"}, {"data": "02/09/2026", "fornecedor": "HL7904", "descricao": "Cordao de pescoco para Celular", "cor": "Unica", "codigo": "BG165", "qtdCaixa": 400, "numCaixas": 3, "qtdTotal": 1200, "valorUnit": 12, "valorTotal": 14400, "tipo": "Saida"}, {"data": "02/09/2026", "fornecedor": "G191", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "numCaixas": 25, "qtdTotal": 1000, "valorUnit": 20.9, "valorTotal": 20900, "tipo": "Saida"}, {"data": "11/09/202", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Preta", "codigo": "BG18810", "qtdCaixa": 36, "numCaixas": 20, "qtdTotal": 720, "valorUnit": 19.9, "valorTotal": 14327.999999999998, "tipo": "Saida"}, {"data": "11/09/202", "fornecedor": "C70145", "descricao": "Caneca Ceramica", "cor": "Azul", "codigo": "BG18803", "qtdCaixa": 36, "numCaixas": 7, "qtdTotal": 280, "valorUnit": 19.9, "valorTotal": 5572, "tipo": "Saida"}], "tr3": [{"codigo": "BG087M", "descricao": "CAIXA PAPELAO 300G+220G - MONTAVEL - 30X23X13CM -PRETA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 3000, "saldoEmpenhado": "0", "saldoDisponivel": 3500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG102", "descricao": "GARRAFA DE AGUA INOX - COR ÚNICA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 4200, "saldoEmpenhado": "0", "saldoDisponivel": 4200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG108.01", "descricao": "CANETA ESFEROGRAFICA DE METAL  - BRANCA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 20000, "saldoEmpenhado": "0", "saldoDisponivel": 20000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG108.10", "descricao": "CANETA ESFEROGRAFICA DE METAL - PRETA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 20000, "saldoEmpenhado": "0", "saldoDisponivel": 20000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG112", "descricao": "BLOCO DE ANOTACOES A5 PAUTADO 80 FLS 70 GRM CAPA MAT.SINTETICO", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 8000, "saldoEmpenhado": "0", "saldoDisponivel": 9000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG115", "descricao": "KIT CAFÉ - 2 XICARAS VIDRO", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 9000, "saldoEmpenhado": "0", "saldoDisponivel": 9000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG131 01", "descricao": "CINTA DE PULSO PARA CELULAR - BRANCO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 500, "saldoEmpenhado": "0", "saldoDisponivel": 500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG131 02", "descricao": "CINTA DE PULSO PARA CELULAR - CINZA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG131 03", "descricao": "CINTA DE PULSO PARA CELULAR - AZUL", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG131 10", "descricao": "CINTA DE PULSO PARA CELULAR - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 7000, "saldoEmpenhado": "0", "saldoDisponivel": 7000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG139", "descricao": "KIT BANHO COM 5 PECAS", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 2520, "saldoEmpenhado": "0", "saldoDisponivel": 2520, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG142", "descricao": "MOCHILA", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1590, "saldoEmpenhado": "0", "saldoDisponivel": 1590, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG146", "descricao": "KIT BLOCO ANOTACOES E CANETA ESFEROGRAFICA METAL - COR UNICA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 9000, "saldoEmpenhado": "0", "saldoDisponivel": 9000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG155.01", "descricao": "CUIA TÉRMICA PARA MATE (250ML) E BOMBA INOX - BRANCA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 500, "saldoEmpenhado": "0", "saldoDisponivel": 500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG155.10", "descricao": "CUIA TÉRMICA PARA MATE (250ML) E BOMBA INOX - PRETA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 3000, "saldoEmpenhado": "0", "saldoDisponivel": 3000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG160", "descricao": "BASE DE RECARGA SEM FIO / USB - BAMBU", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 01", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - BRANCO", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 03", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - AZUL", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 04", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - VERMELHO", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 08", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - VERDE", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 09", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - PRATA", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG161 10", "descricao": "LUVA RFID PARA CARTOES BANCARIOS - PRETO", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 85000, "saldoEmpenhado": "0", "saldoDisponivel": 85000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG165", "descricao": "CORDAO DE PESCOCO PARA CELULAR", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 16800, "saldoEmpenhado": "0", "saldoDisponivel": 16800, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG171", "descricao": "USB HUB EM ALUMINIO PARA NOTEBOOKS - COR UNICA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 4000, "saldoEmpenhado": "0", "saldoDisponivel": 4000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG178 01", "descricao": "CHAVEIRO MOSQUETAO RETRATIL - BRANCO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 0, "saldoEmpenhado": "0", "saldoDisponivel": 0, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG178 10", "descricao": "CHAVEIRO MOSQUETAO RETRATIL - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 12000, "saldoEmpenhado": "0", "saldoDisponivel": 12000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG179 01", "descricao": "CORDAO DE PULSO PARA CELULAR - BRANCO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1300, "saldoEmpenhado": "0", "saldoDisponivel": 1300, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG179 02", "descricao": "CORDAO DE PULSO PARA CELULAR -CINZA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1300, "saldoEmpenhado": "0", "saldoDisponivel": 1300, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG179 03", "descricao": "CORDAO DE PULSO PARA CELULAR - AZUL", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 350, "saldoEmpenhado": "0", "saldoDisponivel": 350, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG179 10", "descricao": "CORDAO DE PULSO PARA CELULAR - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 7600, "saldoEmpenhado": "0", "saldoDisponivel": 7600, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG180 01", "descricao": "CORDAO DE PESCOCO PARA CELULAR -BRANCO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG180 02", "descricao": "CORDAO DE PESCOCO PARA CELULAR - CINZA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG180 03", "descricao": "CORDAO DE PESCOCO PARA CELULAR - AZUL", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG180 10", "descricao": "CORDAO DE PESCOCO PARA CELULAR - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 7500, "saldoEmpenhado": "0", "saldoDisponivel": 7500, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG181 02", "descricao": "CHAVEIRO  - CINZA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1200, "saldoEmpenhado": "0", "saldoDisponivel": 1200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG181 03", "descricao": "CHAVEIRO - AZUL", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1200, "saldoEmpenhado": "0", "saldoDisponivel": 1200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG181 10", "descricao": "CHAVEIRO - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1200, "saldoEmpenhado": "0", "saldoDisponivel": 1200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG182", "descricao": "CHAVEIRO BAMBU - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 2000, "saldoEmpenhado": "0", "saldoDisponivel": 2000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG183 02", "descricao": "CORDAO DE CRACHA / CELULAR - CINZA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 2100, "saldoEmpenhado": "0", "saldoDisponivel": 2100, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG183 03", "descricao": "CORDAO DE CRACHA / CELULAR - AZUL", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 900, "saldoEmpenhado": "0", "saldoDisponivel": 900, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG183 10", "descricao": "CORDAO DE CRACHA / CELULAR - PRETO", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 3000, "saldoEmpenhado": "0", "saldoDisponivel": 3000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG186", "descricao": "XICARA DE CHA 250ML - VIDRO", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 9048, "saldoEmpenhado": "0", "saldoDisponivel": 9048, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG187", "descricao": "AQUECEDOR DE CANECA (C/CANECA) E RECARGA WIRELESS", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 816, "saldoEmpenhado": "0", "saldoDisponivel": 816, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG188.03", "descricao": "CANECA CERAMICA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 0, "saldoEmpenhado": "0", "saldoDisponivel": 280, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG188.10", "descricao": "CANECA CERAMICA -  COR PRETA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 920, "saldoEmpenhado": "0", "saldoDisponivel": 1640, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG189.03", "descricao": "COPO CERAMICA COM TAMPA BAMBU - AZUL", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 640, "saldoEmpenhado": "0", "saldoDisponivel": 640, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG189.10", "descricao": "COPO CERAMICA COM TAMPA BAMBU - PRETO", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 1640, "saldoEmpenhado": "0", "saldoDisponivel": 1640, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG190", "descricao": "SUPORTE DE BOLSA PARA MESAS", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 3800, "saldoEmpenhado": "0", "saldoDisponivel": 3800, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG191", "descricao": "CANECA CERAMICA COM TAMPA DE BAMBU", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 2800, "saldoEmpenhado": "0", "saldoDisponivel": 2800, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG192.01", "descricao": "CANETA ESFEROGRAFICA DE METAL - BRANCA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 8000, "saldoEmpenhado": "0", "saldoDisponivel": 8000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG192.03", "descricao": "CANETA ESFEROGRAFICA DE METAL - AZUL", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 4000, "saldoEmpenhado": "0", "saldoDisponivel": 4000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG192.10", "descricao": "CANETA ESFEROGRAFICA DE METAL - PRETA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 8000, "saldoEmpenhado": "0", "saldoDisponivel": 8000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG193", "descricao": "MARCA-TEXTO 3 CORES - COR UNICA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG194.01", "descricao": "GARRAFA DE AGUA PLASTICA 1 LITRO - BRANCA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 2000, "saldoEmpenhado": "0", "saldoDisponivel": 2000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG194.10", "descricao": "GARRAFA DE AGUA PLASTICA 1 LITRO - PRETA", "lote": "", "fabricacao": "23/03/2026", "validade": "", "saldo": 2000, "saldoEmpenhado": "0", "saldoDisponivel": 2000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG195", "descricao": "CONJUNTO DE CAFÉ COM COADOR E BULE", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 918, "saldoEmpenhado": "0", "saldoDisponivel": 918, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG196", "descricao": "KIT BARISTA 2", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 324, "saldoEmpenhado": "0", "saldoDisponivel": 324, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG197", "descricao": "PRENSA FRANCESA PAREDE DUPLA 350ML", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 528, "saldoEmpenhado": "0", "saldoDisponivel": 528, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG198", "descricao": "PRENSA FRANCESA TAMPA DE BAMBU 600ML", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 888, "saldoEmpenhado": "0", "saldoDisponivel": 888, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG199 01", "descricao": "CAIXA PAPELAO 1200G - MAGNETICA - 23X15X10CM - BRANCA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 360, "saldoEmpenhado": "0", "saldoDisponivel": 360, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG199 10", "descricao": "CAIXA PAPELAO 1200G - MAGNETICA - 23X15X10CM - PRETA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 1350, "saldoEmpenhado": "0", "saldoDisponivel": 1350, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG200 01", "descricao": "CAIXA PAPELAO 1200G - MAGNETICO - 31X20X10CM - BRANCA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 870, "saldoEmpenhado": "0", "saldoDisponivel": 870, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG200 10", "descricao": "CAIXA PAPELAO 1200G - MAGNETICO - 31X20X10CM -PRETA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 2460, "saldoEmpenhado": "0", "saldoDisponivel": 2460, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG201 01", "descricao": "CAIXA PAPELAO 1200G - MAGNETICO - 35X23X10CM - BRANCA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 360, "saldoEmpenhado": "0", "saldoDisponivel": 360, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG201 10", "descricao": "CAIXA PAPELAO 1200G - MAGNETICO - 35X23X10CM -PRETA", "lote": "", "fabricacao": "06/05/2026", "validade": "", "saldo": 0, "saldoEmpenhado": "0", "saldoDisponivel": 0, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG202", "descricao": "CAIXA PAPELAO 1200G - MAGNETICO - 35X20,5X11,3CM - PRATA", "lote": "", "fabricacao": "23/06/2026", "validade": "", "saldo": 510, "saldoEmpenhado": "0", "saldoDisponivel": 510, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG203 01", "descricao": "GARRAFA 700ML -BRANCO", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG203 10", "descricao": "GARRAFA 700ML - PRETO", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1000, "saldoEmpenhado": "0", "saldoDisponivel": 1000, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG204 01", "descricao": "GARRAFA 900ML - BRANCO", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1200, "saldoEmpenhado": "0", "saldoDisponivel": 1200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG204 10", "descricao": "GARRAFA 900ML -PRETO", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1200, "saldoEmpenhado": "0", "saldoDisponivel": 1200, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG205 01", "descricao": "GARRAFA 1200ML -BRANCO", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1250, "saldoEmpenhado": "0", "saldoDisponivel": 1250, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG205 10", "descricao": "GARRAFA 1200ML", "lote": "", "fabricacao": "05/04/2026", "validade": "", "saldo": 1250, "saldoEmpenhado": "0", "saldoDisponivel": 1250, "bloqueado": "NÃO - NORMAL"}, {"codigo": "BG208", "descricao": "NECESSAIRE 15X26", "lote": "", "fabricacao": "23/04/2026", "validade": "", "saldo": 6000, "saldoEmpenhado": "0", "saldoDisponivel": 6000, "bloqueado": "NÃO - NORMAL"}], "evo": [{"codigo": "BG087M", "descricao": "CAIXA PARA PRESENTE EM PAPELAO PRETO", "saldo": 3000}, {"codigo": "BG10210", "descricao": "GARRAFA TÉRMICA DE ALUMÍNIO PRETA", "saldo": 4200}, {"codigo": "BG10801", "descricao": "CANETA ESFEROGRAFICA METAL COM TOUCH BRANCA", "saldo": 20000}, {"codigo": "BG10810", "descricao": "CANETA ESFEROGRAFICA METAL COM TOUCH PRETA", "saldo": 20000}, {"codigo": "BG11210", "descricao": "CADERNO DE ANOTAÇÕES A5 PRETO", "saldo": 8000}, {"codigo": "BG115", "descricao": "CONJUNTO DE 2 XÍCARAS DE CAFÉ 90ML.", "saldo": 9000}, {"codigo": "BG13101", "descricao": "CINTA DE PULSO PARA CELULAR", "saldo": 500}, {"codigo": "BG13102", "descricao": "CINTA DE PULSO PARA CELULAR", "saldo": 1000}, {"codigo": "BG13103", "descricao": "CINTA DE PULSO PARA CELULAR - AZUL", "saldo": 1000}, {"codigo": "BG13110", "descricao": "CINTA DE PULSO PARA CELULAR - PRETO", "saldo": 7000}, {"codigo": "BG139", "descricao": "KIT DE BANHO", "saldo": 2520}, {"codigo": "BG142", "descricao": "MOCHILA PARA NOTEBOOK", "saldo": 1590}, {"codigo": "BG146", "descricao": "CADERNO DE ANOTAÇÕES A5 COM CANETA DE METAL", "saldo": 9000}, {"codigo": "BG15501", "descricao": "CUIA PARA CHIMARRÃO", "saldo": 500}, {"codigo": "BG15510", "descricao": "CUIA PARA CHIMARRÃO", "saldo": 3000}, {"codigo": "BG160", "descricao": "BASE DE RECARGA DE CELULAR", "saldo": 1000}, {"codigo": "BG16101", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 7500}, {"codigo": "BG16103", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 7500}, {"codigo": "BG16104", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 7500}, {"codigo": "BG16108", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 7500}, {"codigo": "BG16109", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 7500}, {"codigo": "BG16110", "descricao": "LUVA PARA PROTECAO RFID DE CARTOES BANCARIOS", "saldo": 85000}, {"codigo": "BG165", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR", "saldo": 16800}, {"codigo": "BG171", "descricao": "USB HUB EM ALUMINIO PARA NOTEBOOKS", "saldo": 4000}, {"codigo": "BG17801", "descricao": "CHAVEIRO MOSQUETÃO RETRÁTIL, PORTA-CRACHÁ OU", "saldo": 0}, {"codigo": "BG17810", "descricao": "CHAVEIRO MOSQUETÃO RETRÁTIL, PORTA-CRACHÁ OU", "saldo": 12000}, {"codigo": "BG17901", "descricao": "CORDÃO DE PULSO PARA CELULAR - BRANCO", "saldo": 1300}, {"codigo": "BG17902", "descricao": "CORDÃO DE PULSO PARA CELULAR - CINZA", "saldo": 1300}, {"codigo": "BG17903", "descricao": "CORDÃO DE PULSO PARA CELULAR - AZUL", "saldo": 350}, {"codigo": "BG17910", "descricao": "CORDÃO DE PULSO PARA CELULAR - PRETO", "saldo": 7600}, {"codigo": "BG18001", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR - BRANCO", "saldo": 1000}, {"codigo": "BG18002", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR - CINZA", "saldo": 1000}, {"codigo": "BG18003", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR - AZUL", "saldo": 1000}, {"codigo": "BG18010", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR - PRETO", "saldo": 7500}, {"codigo": "BG18102", "descricao": "CHAVEIRO DE ARGOLA E SUPORTE PARA CELULAR - C", "saldo": 1200}, {"codigo": "BG18103", "descricao": "CHAVEIRO DE ARGOLA E SUPORTE PARA CELULAR - A", "saldo": 1200}, {"codigo": "BG18110", "descricao": "CHAVEIRO DE ARGOLA E SUPORTE PARA CELULAR - P", "saldo": 1200}, {"codigo": "BG182", "descricao": "CHAVEIRO DE ARGOLA E SUPORTE PARA CELULAR - A", "saldo": 2000}, {"codigo": "BG18302", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR E CRACHÁ - CIN", "saldo": 2100}, {"codigo": "BG18303", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR E CRACHÁ - AZU", "saldo": 900}, {"codigo": "BG18310", "descricao": "CORDÃO DE PESCOÇO PARA CELULAR E CRACHÁ - PRE", "saldo": 3000}, {"codigo": "BG186", "descricao": "XÍCARA VIDRO BOROSSILICATO PAREDE DUPLA 250ML", "saldo": 9048}, {"codigo": "BG187", "descricao": "AQUECEDOR DE CANECA (C/CANECA) E CARREGADOR", "saldo": 816}, {"codigo": "BG18803", "descricao": "CANECA DE CERÂMICA EMBORRACHADA - 415ML - AZU", "saldo": 280}, {"codigo": "BG18810", "descricao": "CANECA DE CERÂMICA EMBORRACHADA - 415ML - PRE", "saldo": 1640}, {"codigo": "BG18903", "descricao": "COPO CERÂMICA EMBORRACHADO - 360ML. TAMPA DE ", "saldo": 640}, {"codigo": "BG18910", "descricao": "COPO CERÂMICA EMBORRACHADO - 360ML. TAMPA DE ", "saldo": 1640}, {"codigo": "BG190", "descricao": "SUPORTE PARA BOLSAS EM METAL", "saldo": 3800}, {"codigo": "BG191", "descricao": "CANECA E COLHER DE CERÂMICA COM TAMPA DE BAMB", "saldo": 2800}, {"codigo": "BG19201", "descricao": "CANETA ESFEROGRÁFICA DE ALUMÍNIO RECICLADO CO", "saldo": 8000}, {"codigo": "BG19203", "descricao": "CANETA ESFEROGRÁFICA DE ALUMÍNIO RECICLADO CO", "saldo": 4000}, {"codigo": "BG19210", "descricao": "CANETA ESFEROGRÁFICA DE ALUMÍNIO RECICLADO CO", "saldo": 8000}, {"codigo": "BG193", "descricao": "MARCA TEXTO SPINNER COM 3 CORES", "saldo": 1000}, {"codigo": "BG19401", "descricao": "GARRAFA ESPORTIVA MOTIVACIONAL RPET COM 1 LIT", "saldo": 2000}, {"codigo": "BG19410", "descricao": "GARRAFA ESPORTIVA MOTIVACIONAL RPET COM 1 LIT", "saldo": 2000}, {"codigo": "BG195", "descricao": "CONJUNTO COADOR COM VÁLVULA E COLETOR DE CAFÉ", "saldo": 918}, {"codigo": "BG196", "descricao": "MALETA COM KIT BARISTA 8 PECAS", "saldo": 324}, {"codigo": "BG197", "descricao": "PRENSA FRANCESA EM BOROSSILICATO COM PAREDE D", "saldo": 528}, {"codigo": "BG198", "descricao": "PRENSA FRANCESA EM BOROSSILICATO E BAMBU NATU", "saldo": 888}, {"codigo": "BG19901", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 360}, {"codigo": "BG19910", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 1350}, {"codigo": "BG20001", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 870}, {"codigo": "BG20010", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 2460}, {"codigo": "BG20101", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 360}, {"codigo": "BG20110", "descricao": "CAIXA PAPEL 1200G LAMINADA - MONTÁVEL - MAGNÉ", "saldo": 0}, {"codigo": "BG202", "descricao": "CAIXA PAPELÃO 1200G LAMINADA PRATA - MONTÁVEL", "saldo": 510}, {"codigo": "BG20301", "descricao": "GARRAFA TÉRMICA INOX 700ML. ALÇA, ANTI-VAZAM.", "saldo": 1000}, {"codigo": "BG20310", "descricao": "GARRAFA TÉRMICA INOX 700ML. ALÇA, ANTI-VAZAM.", "saldo": 1000}, {"codigo": "BG20401", "descricao": "GARRAFA TÉRMICA INOX 900ML. ALÇA, ANTI-VAZAM.", "saldo": 1200}, {"codigo": "BG20410", "descricao": "GARRAFA TÉRMICA INOX 900ML. ALÇA, ANTI-VAZAM.", "saldo": 1200}, {"codigo": "BG20501", "descricao": "COPO TÉRMICO INOX 1200ML. ALÇA, ANTI-VAZAM. E", "saldo": 1250}, {"codigo": "BG20510", "descricao": "COPO TÉRMICO INOX 1200ML. ALÇA, ANTI-VAZAM. E", "saldo": 1250}, {"codigo": "BG208", "descricao": "NECESSAIRE PVC E PU - COM ZIPER E ALCA DE NYL", "saldo": 6000}], "posicoes": [{"rua": "G10", "fileira": "06", "andar": "04", "descricao": "Base de recarga sem fio / USB - Bambu", "cor": "Unica", "codigo": "BG160", "qtdCaixa": 50, "qtd": 1000, "caixasPalete": 20, "posicao": "G100604"}, {"rua": "G10", "fileira": "19", "andar": "05", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "qtd": 1250, "caixasPalete": 25, "posicao": "G101905"}, {"rua": "G10", "fileira": "20", "andar": "05", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "qtd": 2250, "caixasPalete": 45, "posicao": "G102005"}, {"rua": "G10", "fileira": "21", "andar": "05", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "qtd": 2250, "caixasPalete": 45, "posicao": "G102105"}, {"rua": "G10", "fileira": "22", "andar": "05", "descricao": "Bloco de Anotacoes A5 Pautado 80 Fls 70 grm Capa mat.sintetico", "cor": "Unica", "codigo": "BG112", "qtdCaixa": 50, "qtd": 2250, "caixasPalete": 45, "posicao": "G102205"}, {"rua": "G10", "fileira": "04", "andar": "04", "descricao": "Caneca Ceramica", "cor": "Preta", "codigo": "BG18810", "qtdCaixa": 36, "qtd": 792, "caixasPalete": 22, "posicao": "G100404"}, {"rua": "G10", "fileira": "05", "andar": "04", "descricao": "Caneca Ceramica", "cor": "Preta", "codigo": "BG18810", "qtdCaixa": 36, "qtd": 128, "caixasPalete": 3, "posicao": "G100504"}, {"rua": "G10", "fileira": "03", "andar": "02", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG19201", "qtdCaixa": 500, "qtd": 8000, "caixasPalete": 16, "posicao": "G100302"}, {"rua": "G10", "fileira": "04", "andar": "02", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG19210", "qtdCaixa": 500, "qtd": 8000, "caixasPalete": 16, "posicao": "G100402"}, {"rua": "G10", "fileira": "05", "andar": "02", "descricao": "Caneta Esferografica de Metal", "cor": "Azul", "codigo": "BG19203", "qtdCaixa": 500, "qtd": 4000, "caixasPalete": 8, "posicao": "G100502"}, {"rua": "G10", "fileira": "06", "andar": "02", "descricao": "Caneta Esferografica de Metal", "cor": "Branca", "codigo": "BG10801", "qtdCaixa": 1000, "qtd": 20000, "caixasPalete": 20, "posicao": "G100602"}, {"rua": "G10", "fileira": "07", "andar": "02", "descricao": "Caneta Esferografica de Metal", "cor": "Preta", "codigo": "BG10810", "qtdCaixa": 1000, "qtd": 20000, "caixasPalete": 20, "posicao": "G100702"}, {"rua": "G10", "fileira": "09", "andar": "02", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Azul", "codigo": "BG18903", "qtdCaixa": 36, "qtd": 640, "caixasPalete": 17, "posicao": "G100902"}, {"rua": "G10", "fileira": "09", "andar": "05", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Preta", "codigo": "BG18910", "qtdCaixa": 36, "qtd": 1152, "caixasPalete": 32, "posicao": "G100905"}, {"rua": "G10", "fileira": "10", "andar": "05", "descricao": "Copo Ceramica com tampa Bambu", "cor": "Preta", "codigo": "BG18910", "qtdCaixa": 36, "qtd": 488, "caixasPalete": 13, "posicao": "G101005"}, {"rua": "G10", "fileira": "04", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Branca", "codigo": "BG15501", "qtdCaixa": 50, "qtd": 500, "caixasPalete": 10, "posicao": "G100403"}, {"rua": "G10", "fileira": "05", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G100503"}, {"rua": "G10", "fileira": "06", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G100603"}, {"rua": "G10", "fileira": "07", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G100703"}, {"rua": "G10", "fileira": "08", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G100803"}, {"rua": "G10", "fileira": "09", "andar": "03", "descricao": "Cuia Térmica para Mate (250ml) e Bomba Inox", "cor": "Preta", "codigo": "BG15510", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G100903"}, {"rua": "G10", "fileira": "03", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 800, "caixasPalete": 20, "posicao": "G100305"}, {"rua": "G10", "fileira": "04", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 800, "caixasPalete": 20, "posicao": "G100405"}, {"rua": "G10", "fileira": "05", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 800, "caixasPalete": 20, "posicao": "G100505"}, {"rua": "G10", "fileira": "06", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 800, "caixasPalete": 20, "posicao": "G100605"}, {"rua": "G10", "fileira": "07", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 800, "caixasPalete": 20, "posicao": "G100705"}, {"rua": "G10", "fileira": "08", "andar": "05", "descricao": "Garrafa de Agua Inox", "cor": "Unica", "codigo": "BG102", "qtdCaixa": 40, "qtd": 200, "caixasPalete": 5, "posicao": "G100805"}, {"rua": "G10", "fileira": "11", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101105"}, {"rua": "G10", "fileira": "12", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101205"}, {"rua": "G10", "fileira": "13", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101305"}, {"rua": "G10", "fileira": "14", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Branca", "codigo": "BG19401", "qtdCaixa": 50, "qtd": 200, "caixasPalete": 4, "posicao": "G101405"}, {"rua": "G10", "fileira": "15", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "qtd": 200, "caixasPalete": 4, "posicao": "G101505"}, {"rua": "G10", "fileira": "16", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101605"}, {"rua": "G10", "fileira": "17", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101705"}, {"rua": "G10", "fileira": "18", "andar": "05", "descricao": "Garrafa de Agua Plastica 1 Litro", "cor": "Preta", "codigo": "BG19410", "qtdCaixa": 50, "qtd": 600, "caixasPalete": 12, "posicao": "G101805"}, {"rua": "G10", "fileira": "07", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G100704"}, {"rua": "G10", "fileira": "08", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G100804"}, {"rua": "G10", "fileira": "09", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G100904"}, {"rua": "G10", "fileira": "10", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101004"}, {"rua": "G10", "fileira": "11", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101104"}, {"rua": "G10", "fileira": "12", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101204"}, {"rua": "G10", "fileira": "13", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101304"}, {"rua": "G10", "fileira": "14", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101404"}, {"rua": "G10", "fileira": "15", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101504"}, {"rua": "G10", "fileira": "16", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101604"}, {"rua": "G10", "fileira": "17", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 800, "caixasPalete": 40, "posicao": "G101704"}, {"rua": "G10", "fileira": "18", "andar": "04", "descricao": "Kit Bloco Anotacoes e Caneta Esferografica Metal", "cor": "Unica", "codigo": "BG146", "qtdCaixa": 20, "qtd": 200, "caixasPalete": 10, "posicao": "G101804"}, {"rua": "G10", "fileira": "08", "andar": "02", "descricao": "Marca-Texto 3 Cores", "cor": "Unica", "codigo": "BG193", "qtdCaixa": 500, "qtd": 1000, "caixasPalete": 2, "posicao": "G100802"}, {"rua": "G10", "fileira": "03", "andar": "03", "descricao": "USB HUB em Aluminio para Notebooks", "cor": "Unica", "codigo": "BG171", "qtdCaixa": 200, "qtd": 4000, "caixasPalete": 20, "posicao": "G100303"}, {"rua": "G10", "fileira": 14, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101402"}, {"rua": "G10", "fileira": 15, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101502"}, {"rua": "G10", "fileira": 16, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101602"}, {"rua": "G10", "fileira": 17, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101702"}, {"rua": "G10", "fileira": 18, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101802"}, {"rua": "G10", "fileira": 19, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G101902"}, {"rua": "G10", "fileira": 20, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102002"}, {"rua": "G10", "fileira": 21, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102102"}, {"rua": "G10", "fileira": 22, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102202"}, {"rua": "G10", "fileira": 23, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102302"}, {"rua": "G10", "fileira": 24, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102402"}, {"rua": "G10", "fileira": 25, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102502"}, {"rua": "G10", "fileira": 26, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102602"}, {"rua": "G10", "fileira": 27, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102702"}, {"rua": "G10", "fileira": 28, "andar": "02", "descricao": "Kit Café - 2 Xicaras Vidro", "cor": "Unica", "codigo": "BG115", "qtdCaixa": 40, "qtd": 600, "caixasPalete": 15, "posicao": "G102802"}, {"rua": "G10", "fileira": 10, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 408, "caixasPalete": 17, "posicao": "G101003"}, {"rua": "G10", "fileira": 11, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101103"}, {"rua": "G10", "fileira": 12, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101203"}, {"rua": "G10", "fileira": 13, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101303"}, {"rua": "G10", "fileira": 14, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101403"}, {"rua": "G10", "fileira": 15, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101503"}, {"rua": "G10", "fileira": 16, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101603"}, {"rua": "G10", "fileira": 17, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101703"}, {"rua": "G10", "fileira": 18, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101803"}, {"rua": "G10", "fileira": 19, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101903"}, {"rua": "G10", "fileira": 20, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102003"}, {"rua": "G10", "fileira": 21, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102103"}, {"rua": "G10", "fileira": 22, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102203"}, {"rua": "G10", "fileira": 23, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102303"}, {"rua": "G10", "fileira": 24, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102403"}, {"rua": "G10", "fileira": 25, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102503"}, {"rua": "G10", "fileira": 26, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102603"}, {"rua": "G10", "fileira": 27, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102703"}, {"rua": "G10", "fileira": 28, "andar": "03", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102803"}, {"rua": "G10", "fileira": 19, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G101904"}, {"rua": "G10", "fileira": 20, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102004"}, {"rua": "G10", "fileira": 21, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102104"}, {"rua": "G10", "fileira": 22, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102204"}, {"rua": "G10", "fileira": 23, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102304"}, {"rua": "G10", "fileira": 24, "andar": "04", "descricao": "Xicara de Cha 250ml - Vidro", "cor": "Unica", "codigo": "BG186", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "G102404"}, {"rua": "G10", "fileira": 24, "andar": "05", "descricao": "Cordao de pescoco para Celular", "cor": "Única", "codigo": "BG165", "qtdCaixa": 400, "qtd": 7200, "caixasPalete": 18, "posicao": "G102405"}, {"rua": "G10", "fileira": 26, "andar": "05", "descricao": "Cordao de pescoco para Celular", "cor": "Única", "codigo": "BG165", "qtdCaixa": 400, "qtd": 9600, "caixasPalete": 24, "posicao": "G102605"}, {"rua": "G10", "fileira": 12, "andar": "02", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRETO", "codigo": "BG16110", "qtdCaixa": 2500, "qtd": 85000, "caixasPalete": 34, "posicao": "G101202"}, {"rua": "G10", "fileira": 11, "andar": "02", "descricao": "Luva RFID para Cartoes Bancarios", "cor": "BRANCO", "codigo": "BG16101", "qtdCaixa": 2500, "qtd": 7500, "caixasPalete": 3, "posicao": "G101102"}, {"rua": null, "fileira": null, "andar": null, "descricao": "Luva RFID para Cartoes Bancarios", "cor": "PRATA", "codigo": "BG16109", "qtdCaixa": 2500, "qtd": 7500, "caixasPalete": 3, "posicao": null}, {"rua": null, "fileira": null, "andar": null, "descricao": "Luva RFID para Cartoes Bancarios", "cor": "AZUL", "codigo": "BG16103", "qtdCaixa": 2500, "qtd": 7500, "caixasPalete": 3, "posicao": null}, {"rua": null, "fileira": null, "andar": null, "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERMELHO", "codigo": "BG16104", "qtdCaixa": 2500, "qtd": 7500, "caixasPalete": 3, "posicao": null}, {"rua": null, "fileira": null, "andar": null, "descricao": "Luva RFID para Cartoes Bancarios", "cor": "VERDE", "codigo": "BG16108", "qtdCaixa": 2500, "qtd": 7500, "caixasPalete": 3, "posicao": null}, {"rua": "G10", "fileira": 28, "andar": "05", "descricao": "Aquecedor de Caneca (c/caneca) e Recarga Wireless", "cor": "Unica", "codigo": "BG187", "qtdCaixa": 24, "qtd": 432, "caixasPalete": 18, "posicao": "G102805"}, {"rua": "G10", "fileira": 29, "andar": "05", "descricao": "Aquecedor de Caneca (c/caneca) e Recarga Wireless", "cor": "Unica", "codigo": "BG187", "qtdCaixa": 24, "qtd": 384, "caixasPalete": 16, "posicao": "G102905"}, {"rua": "G10", "fileira": 13, "andar": "02", "descricao": "Suporte de Bolsa para mesas", "cor": "Unica", "codigo": "BG190", "qtdCaixa": 400, "qtd": 3800, "caixasPalete": 9.5, "posicao": "G101302"}, {"rua": "G10", "fileira": 29, "andar": "02", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "qtd": 960, "caixasPalete": 24, "posicao": "G102902"}, {"rua": "G10", "fileira": 30, "andar": "02", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "qtd": 960, "caixasPalete": 24, "posicao": "G103002"}, {"rua": "G10", "fileira": 29, "andar": "03", "descricao": "Caneca Ceramica com tampa de Bambu", "cor": "Unica", "codigo": "BG191", "qtdCaixa": 40, "qtd": 880, "caixasPalete": 22, "posicao": "G102903"}, {"rua": "G10", "fileira": 23, "andar": "05", "descricao": "Necessaire 15x26", "cor": "Unica", "codigo": "BG208", "qtdCaixa": 100, "qtd": 2000, "caixasPalete": 20, "posicao": "G102305"}, {"rua": "G10", "fileira": 25, "andar": "05", "descricao": "Necessaire 15x26", "cor": "Unica", "codigo": "BG208", "qtdCaixa": 100, "qtd": 2000, "caixasPalete": 20, "posicao": "G102505"}, {"rua": "G10", "fileira": 27, "andar": "05", "descricao": "Necessaire 15x26", "cor": "Unica", "codigo": "BG208", "qtdCaixa": 100, "qtd": 2000, "caixasPalete": 20, "posicao": "G102705"}, {"rua": "G10", "fileira": "01", "andar": "05", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "G100105"}, {"rua": "G10", "fileira": "02", "andar": "05", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "G100205"}, {"rua": "G10", "fileira": "01", "andar": "04", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "G100104"}, {"rua": "G10", "fileira": "02", "andar": "04", "descricao": "Garrafa 900ml", "cor": "BRANCO", "codigo": "BG20401", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "G100204"}, {"rua": "G10", "fileira": "25", "andar": "04", "descricao": "Garrafa 700ml", "cor": "PRETO", "codigo": "BG20310", "qtdCaixa": 50, "qtd": 300, "caixasPalete": 6, "posicao": "G102504"}, {"rua": "G10", "fileira": "26", "andar": "04", "descricao": "Garrafa 700ml", "cor": "PRETO", "codigo": "BG20310", "qtdCaixa": 50, "qtd": 300, "caixasPalete": 6, "posicao": "G102604"}, {"rua": "G10", "fileira": "29", "andar": "03", "descricao": "Garrafa 700ml", "cor": "PRETO", "codigo": "BG20310", "qtdCaixa": 50, "qtd": 400, "caixasPalete": 8, "posicao": "G102903"}, {"rua": "G10", "fileira": "27", "andar": "04", "descricao": "Garrafa 700ml", "cor": "BRANCO", "codigo": "BG20301", "qtdCaixa": 50, "qtd": 300, "caixasPalete": 6, "posicao": "G102704"}, {"rua": "G10", "fileira": "28", "andar": "04", "descricao": "Garrafa 700ml", "cor": "BRANCO", "codigo": "BG20301", "qtdCaixa": 50, "qtd": 300, "caixasPalete": 6, "posicao": "G102804"}, {"rua": "G10", "fileira": "30", "andar": "03", "descricao": "Garrafa 700ml", "cor": "BRANCO", "codigo": "BG20301", "qtdCaixa": 50, "qtd": 400, "caixasPalete": 8, "posicao": "G103003"}, {"rua": "F9", "fileira": "01", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 50, "caixasPalete": 2, "posicao": "F90104"}, {"rua": "F9", "fileira": "02", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90204"}, {"rua": "F9", "fileira": "03", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90304"}, {"rua": "F9", "fileira": "04", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90404"}, {"rua": "F9", "fileira": "05", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90504"}, {"rua": "F9", "fileira": "06", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90604"}, {"rua": "F9", "fileira": "07", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90704"}, {"rua": "F9", "fileira": "08", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90804"}, {"rua": "F9", "fileira": "09", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "PRETO", "codigo": "BG20510", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F90904"}, {"rua": "F9", "fileira": "10", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 50, "caixasPalete": 2, "posicao": "F91004"}, {"rua": "F9", "fileira": "11", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91104"}, {"rua": "F9", "fileira": "12", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91204"}, {"rua": "F9", "fileira": "13", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91304"}, {"rua": "F9", "fileira": "14", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91404"}, {"rua": "F9", "fileira": "15", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91504"}, {"rua": "F9", "fileira": "16", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91604"}, {"rua": "F9", "fileira": "17", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91704"}, {"rua": "F9", "fileira": "18", "andar": "04", "descricao": "Garrafa 1200ml", "cor": "BRANCO", "codigo": "BG20501", "qtdCaixa": 25, "qtd": 150, "caixasPalete": 6, "posicao": "F91804"}, {"rua": "F9", "fileira": "18", "andar": "05", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "F91805"}, {"rua": "F9", "fileira": "17", "andar": "05", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "F91705"}, {"rua": "F9", "fileira": "16", "andar": "05", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "F91605"}, {"rua": "F9", "fileira": "15", "andar": "05", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "F91505"}, {"rua": "F9", "fileira": "14", "andar": "05", "descricao": "Mochila", "cor": "Unica", "codigo": "BG142", "qtdCaixa": 30, "qtd": 150, "caixasPalete": 5, "posicao": "F91405"}, {"rua": "F9", "fileira": "13", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F91305"}, {"rua": "F9", "fileira": "12", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F91205"}, {"rua": "F9", "fileira": "11", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F91105"}, {"rua": "F9", "fileira": "10", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F91005"}, {"rua": "F9", "fileira": "09", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F90905"}, {"rua": "F9", "fileira": "08", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F90805"}, {"rua": "F9", "fileira": "07", "andar": "05", "descricao": "Kit Banho com 5 pecas", "cor": "Unica", "codigo": "BG139", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "F90705"}, {"rua": "F9", "fileira": "06", "andar": "05", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F90605"}, {"rua": "F9", "fileira": "05", "andar": "05", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F90505"}, {"rua": "F9", "fileira": "04", "andar": "05", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F90405"}, {"rua": "F9", "fileira": "03", "andar": "05", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F90305"}, {"rua": "F9", "fileira": "02", "andar": "05", "descricao": "Garrafa 900ml", "cor": "PRETO", "codigo": "BG20410", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F90205"}, {"rua": "F9", "fileira": "01", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 300, "caixasPalete": 3, "posicao": "F90102"}, {"rua": "F9", "fileira": "02", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 100, "caixasPalete": 1, "posicao": "F90202"}, {"rua": "F9", "fileira": "03", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 800, "caixasPalete": 8, "posicao": "F90302"}, {"rua": "F9", "fileira": "04", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 200, "caixasPalete": 2, "posicao": "F90402"}, {"rua": "F9", "fileira": "05", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 800, "caixasPalete": 8, "posicao": "F90502"}, {"rua": "F9", "fileira": "07", "andar": "02", "descricao": "Caixa Papelao 300g+220g - Montavel - 30x23x13cm", "cor": "PRETA", "codigo": "BG087M", "qtdCaixa": 100, "qtd": 800, "caixasPalete": 8, "posicao": "F90702"}, {"rua": "H11", "fileira": 14, "andar": "05", "descricao": "Cinta de Pulso para Celular", "cor": "BRANCO", "codigo": "BG13101", "qtdCaixa": 500, "qtd": 500, "caixasPalete": 1, "posicao": "H111405"}, {"rua": "H11", "fileira": 14, "andar": "05", "descricao": "Cinta de Pulso para Celular", "cor": "CINZA", "codigo": "BG13102", "qtdCaixa": 500, "qtd": 1000, "caixasPalete": 2, "posicao": "H111405"}, {"rua": "H11", "fileira": 14, "andar": "05", "descricao": "Cinta de Pulso para Celular", "cor": "AZUL", "codigo": "BG13103", "qtdCaixa": 500, "qtd": 1000, "caixasPalete": 2, "posicao": "H111405"}, {"rua": "H11", "fileira": "15", "andar": "05", "descricao": "Cinta de Pulso para Celular", "cor": "PRETO", "codigo": "BG13110", "qtdCaixa": 500, "qtd": 7000, "caixasPalete": 14, "posicao": "H111505"}, {"rua": "H11", "fileira": "03", "andar": "05", "descricao": "Chaveiro Mosquetao Retratil", "cor": "PRETO", "codigo": "BG17810", "qtdCaixa": 500, "qtd": 12000, "caixasPalete": 24, "posicao": "H110305"}, {"rua": "H11", "fileira": "05", "andar": "05", "descricao": "Cordao de Pulso para Celular", "cor": "BRANCO", "codigo": "BG17901", "qtdCaixa": 350, "qtd": 1300, "caixasPalete": 4, "posicao": "H110505"}, {"rua": "H11", "fileira": "05", "andar": "05", "descricao": "Cordao de Pulso para Celular", "cor": "CINZA", "codigo": "BG17902", "qtdCaixa": 350, "qtd": 1300, "caixasPalete": 4, "posicao": "H110505"}, {"rua": "H11", "fileira": "05", "andar": "05", "descricao": "Cordao de Pulso para Celular", "cor": "AZUL", "codigo": "BG17903", "qtdCaixa": 350, "qtd": 350, "caixasPalete": 1, "posicao": "H110505"}, {"rua": "H11", "fileira": "06", "andar": "05", "descricao": "Cordao de Pulso para Celular", "cor": "PRETO", "codigo": "BG17910", "qtdCaixa": 350, "qtd": 7600, "caixasPalete": 22, "posicao": "H110605"}, {"rua": "H11", "fileira": "07", "andar": "05", "descricao": "Cordao de Pescoco para Celular", "cor": "BRANCO", "codigo": "BG18001", "qtdCaixa": 250, "qtd": 1000, "caixasPalete": 4, "posicao": "H110705"}, {"rua": "H11", "fileira": "07", "andar": "05", "descricao": "Cordao de Pescoco para Celular", "cor": "CINZA", "codigo": "BG18002", "qtdCaixa": 250, "qtd": 1000, "caixasPalete": 4, "posicao": "H110705"}, {"rua": "H11", "fileira": "07", "andar": "05", "descricao": "Cordao de Pescoco para Celular", "cor": "AZUL", "codigo": "BG18003", "qtdCaixa": 250, "qtd": 1000, "caixasPalete": 4, "posicao": "H110705"}, {"rua": "H11", "fileira": "08", "andar": "05", "descricao": "Cordao de Pescoco para Celular", "cor": "PRETO", "codigo": "BG18010", "qtdCaixa": 250, "qtd": 7500, "caixasPalete": 30, "posicao": "H110805"}, {"rua": "H11", "fileira": "09", "andar": "05", "descricao": "Chaveiro", "cor": "CINZA", "codigo": "BG18102", "qtdCaixa": 400, "qtd": 1200, "caixasPalete": 3, "posicao": "H110905"}, {"rua": "H11", "fileira": "09", "andar": "05", "descricao": "Chaveiro", "cor": "AZUL", "codigo": "BG18103", "qtdCaixa": 400, "qtd": 1200, "caixasPalete": 3, "posicao": "H110905"}, {"rua": "H11", "fileira": "09", "andar": "05", "descricao": "Chaveiro", "cor": "PRETO", "codigo": "BG18110", "qtdCaixa": 400, "qtd": 1200, "caixasPalete": 3, "posicao": "H110905"}, {"rua": "H11", "fileira": "10", "andar": "05", "descricao": "Chaveiro Bambu", "cor": "UNICA", "codigo": "BG182", "qtdCaixa": 500, "qtd": 2000, "caixasPalete": 4, "posicao": "H111005"}, {"rua": "H11", "fileira": "13", "andar": "05", "descricao": "Cordao de Cracha / Celular", "cor": "CINZA", "codigo": "BG18302", "qtdCaixa": 300, "qtd": 2100, "caixasPalete": 7, "posicao": "H111305"}, {"rua": "H11", "fileira": "11", "andar": "05", "descricao": "Cordao de Cracha / Celular", "cor": "AZUL", "codigo": "BG18303", "qtdCaixa": 300, "qtd": 900, "caixasPalete": 3, "posicao": "H111105"}, {"rua": "H11", "fileira": "12", "andar": "05", "descricao": "Cordao de Cracha / Celular", "cor": "PRETO", "codigo": "BG18310", "qtdCaixa": 300, "qtd": 3000, "caixasPalete": 10, "posicao": "H111205"}, {"rua": "H11", "fileira": "01", "andar": "06", "descricao": "Conjunto de Café com Coador e Bule", "cor": "UNICA", "codigo": "BG195", "qtdCaixa": 18, "qtd": 324, "caixasPalete": 18, "posicao": "H110106"}, {"rua": "H11", "fileira": "02", "andar": "06", "descricao": "Conjunto de Café com Coador e Bule", "cor": "UNICA", "codigo": "BG195", "qtdCaixa": 18, "qtd": 324, "caixasPalete": 18, "posicao": "H110206"}, {"rua": "H11", "fileira": "03", "andar": "06", "descricao": "Conjunto de Café com Coador e Bule", "cor": "UNICA", "codigo": "BG195", "qtdCaixa": 18, "qtd": 270, "caixasPalete": 15, "posicao": "H110306"}, {"rua": "H11", "fileira": "05", "andar": "06", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "qtd": 90, "caixasPalete": 15, "posicao": "H110506"}, {"rua": "H11", "fileira": "06", "andar": "06", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "qtd": 90, "caixasPalete": 15, "posicao": "H110606"}, {"rua": "H11", "fileira": "07", "andar": "06", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "qtd": 54, "caixasPalete": 9, "posicao": "H110706"}, {"rua": "H11", "fileira": "08", "andar": "06", "descricao": "Kit Barista 2", "cor": "UNICA", "codigo": "BG196", "qtdCaixa": 6, "qtd": 90, "caixasPalete": 15, "posicao": "H110806"}, {"rua": "H11", "fileira": "09", "andar": "09", "descricao": "Prensa Francesa Tampa de Bambu 600ml", "cor": "UNICA", "codigo": "BG198", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "H110909"}, {"rua": "H11", "fileira": "11", "andar": "06", "descricao": "Prensa Francesa Parede Dupla 350ml", "cor": "UNICA", "codigo": "BG197", "qtdCaixa": 12, "qtd": 360, "caixasPalete": 30, "posicao": "H111106"}, {"rua": "H11", "fileira": "12", "andar": "06", "descricao": "Prensa Francesa Parede Dupla 350ml", "cor": "UNICA", "codigo": "BG197", "qtdCaixa": 12, "qtd": 168, "caixasPalete": 14, "posicao": "H111206"}, {"rua": "H11", "fileira": "13", "andar": "06", "descricao": "Prensa Francesa Tampa de Bambu 600ml", "cor": "UNICA", "codigo": "BG198", "qtdCaixa": 24, "qtd": 360, "caixasPalete": 15, "posicao": "H111306"}, {"rua": "H11", "fileira": "14", "andar": "06", "descricao": "Prensa Francesa Tampa de Bambu 600ml", "cor": "UNICA", "codigo": "BG198", "qtdCaixa": 24, "qtd": 168, "caixasPalete": 7, "posicao": "H111406"}, {"rua": "F9", "fileira": "11", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "PRETA", "codigo": "BG19910", "qtdCaixa": 30, "qtd": 900, "caixasPalete": 30, "posicao": "F91103"}, {"rua": "F9", "fileira": "12", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "PRETA", "codigo": "BG19910", "qtdCaixa": 30, "qtd": 450, "caixasPalete": 15, "posicao": "F91203"}, {"rua": "F9", "fileira": "04", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "BRANCA", "codigo": "BG20001", "qtdCaixa": 30, "qtd": 720, "caixasPalete": 24, "posicao": "F90403"}, {"rua": "F9", "fileira": "14", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "BRANCA", "codigo": "BG20001", "qtdCaixa": 30, "qtd": 150, "caixasPalete": 5, "posicao": "F91403"}, {"rua": "F9", "fileira": "01", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "qtd": 750, "caixasPalete": 25, "posicao": "F90103"}, {"rua": "F9", "fileira": "02", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "qtd": 450, "caixasPalete": 15, "posicao": "F90203"}, {"rua": "F9", "fileira": "10", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "qtd": 960, "caixasPalete": 32, "posicao": "F91003"}, {"rua": "F9", "fileira": "13", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 31x20x10cm", "cor": "PRETA", "codigo": "BG20010", "qtdCaixa": 30, "qtd": 300, "caixasPalete": 10, "posicao": "F91303"}, {"rua": "F9", "fileira": "07", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "PRETA", "codigo": "BG202", "qtdCaixa": 30, "qtd": 630, "caixasPalete": 21, "posicao": "F90703"}, {"rua": "F9", "fileira": "08", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "PRETA", "codigo": "BG202", "qtdCaixa": 30, "qtd": 570, "caixasPalete": 19, "posicao": "F90803"}, {"rua": "F9", "fileira": "05", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "BRANCA", "codigo": "BG20101", "qtdCaixa": 30, "qtd": 120, "caixasPalete": 4, "posicao": "F90503"}, {"rua": "F9", "fileira": "15", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetico - 35x23x10cm", "cor": "BRANCA", "codigo": "BG20101", "qtdCaixa": 30, "qtd": 240, "caixasPalete": 8, "posicao": "F91503"}, {"rua": "F9", "fileira": "06", "andar": "03", "descricao": "Caixa Papelao 1200g - Magnetica - 23x15x10cm", "cor": "BRANCA", "codigo": "BG19901", "qtdCaixa": 30, "qtd": 360, "caixasPalete": 12, "posicao": "F90603"}]};
+
+</script>
+<script>
+/* =====================================================================
+   Belisk — Validador de Estoque
+   Lógica de normalização de código, agregação de movimentos,
+   cruzamento TR3 x EVO, contagem de posições e renderização.
+   ===================================================================== */
+
+(function () {
+  "use strict";
+
+  var currentData = EMBEDDED_DATA;
+  var currentFileLabel = "Saldo - BILISC - atual.xlsx";
+  var currentRows = [];
+  var currentKPIs = null;
+
+  // ---------- helpers de texto / número ----------
+  function normCode(c) {
+    if (c === null || c === undefined) return "";
+    return String(c).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
+  function normHeader(h) {
+    if (h === null || h === undefined) return "";
+    return String(h)
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+  }
+  function toNumber(v) {
+    if (v === null || v === undefined || v === "") return 0;
+    if (typeof v === "number") return v;
+    var s = String(v).replace(/\./g, "").replace(",", ".");
+    var n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+  function fmtInt(n) {
+    return Math.round(n).toLocaleString("pt-BR");
+  }
+  function fmtDec(n, digits) {
+    return n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+  function fmtMoney(n) {
+    return "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtPct(n) {
+    if (!isFinite(n)) return "—";
+    return n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+  }
+
+  // ---------- matching de código (com fallback por prefixo) ----------
+  function buildLookup(list, codeKey) {
+    return list.map(function (item) {
+      return { norm: normCode(item[codeKey]), item: item };
+    });
+  }
+  function findMatch(normC, lookup) {
+    if (!normC) return null;
+    for (var i = 0; i < lookup.length; i++) {
+      if (lookup[i].norm === normC) return lookup[i].item;
+    }
+    var best = null, bestDiff = 99;
+    for (var j = 0; j < lookup.length; j++) {
+      var n = lookup[j].norm;
+      if (!n) continue;
+      if (n.indexOf(normC) === 0 || normC.indexOf(n) === 0) {
+        var diff = Math.abs(n.length - normC.length);
+        if (diff <= 2 && diff < bestDiff) {
+          bestDiff = diff;
+          best = lookup[j].item;
+        }
+      }
+    }
+    return best;
+  }
+
+  // ---------- agregação principal ----------
+  function buildValidationRows(data) {
+    var movs = data.movimentos || [];
+    var tr3 = data.tr3 || [];
+    var evo = data.evo || [];
+
+    var tr3Lookup = buildLookup(tr3, "codigo");
+    var evoLookup = buildLookup(evo, "codigo");
+
+    var agg = {};
+    var order = [];
+
+    movs.forEach(function (m) {
+      var norm = normCode(m.codigo);
+      if (!norm) return;
+      if (!agg[norm]) {
+        agg[norm] = {
+          codigo: m.codigo,
+          descricao: m.descricao,
+          qtdCaixa: toNumber(m.qtdCaixa),
+          valorUnit: toNumber(m.valorUnit),
+          entradaQtd: 0, saidaQtd: 0,
+          entradaValor: 0, saidaValor: 0,
+          entradaCaixas: 0, saidaCaixas: 0
+        };
+        order.push(norm);
+      }
+      var row = agg[norm];
+      if (m.descricao) row.descricao = m.descricao;
+      if (toNumber(m.qtdCaixa) > 0) row.qtdCaixa = toNumber(m.qtdCaixa);
+      if (toNumber(m.valorUnit) > 0) row.valorUnit = toNumber(m.valorUnit);
+
+      var tipo = String(m.tipo || "").toLowerCase();
+      var qtd = toNumber(m.qtdTotal);
+      var val = toNumber(m.valorTotal);
+      var caixas = toNumber(m.numCaixas);
+
+      if (tipo.indexOf("entr") === 0 || tipo.indexOf("entr") >= 0) {
+        row.entradaQtd += qtd;
+        row.entradaValor += val;
+        row.entradaCaixas += caixas;
+      } else if (tipo.indexOf("said") >= 0 || tipo.indexOf("saíd") >= 0) {
+        row.saidaQtd += qtd;
+        row.saidaValor += val;
+        row.saidaCaixas += caixas;
+      }
+    });
+
+    // inclui códigos que existem no TR3 mas não tiveram movimento no período
+    tr3.forEach(function (t) {
+      var norm = normCode(t.codigo);
+      if (!norm || agg[norm]) return;
+      agg[norm] = {
+        codigo: t.codigo,
+        descricao: t.descricao,
+        qtdCaixa: 0, valorUnit: 0,
+        entradaQtd: 0, saidaQtd: 0,
+        entradaValor: 0, saidaValor: 0,
+        entradaCaixas: 0, saidaCaixas: 0
+      };
+      order.push(norm);
+    });
+
+    var rows = order.map(function (norm) {
+      var r = agg[norm];
+      var qtdTotal = r.entradaQtd - r.saidaQtd;
+      var numCaixas = r.entradaCaixas - r.saidaCaixas;
+      var valorTotal = r.entradaValor - r.saidaValor;
+
+      var tr3Item = findMatch(norm, tr3Lookup);
+      var evoItem = findMatch(norm, evoLookup);
+      var saldoTR3 = tr3Item ? toNumber(tr3Item.saldo) : null;
+      var saldoEVO = evoItem ? toNumber(evoItem.saldo) : null;
+
+      var status, diferenca;
+      if (saldoTR3 === null && saldoEVO === null) {
+        status = "none";
+        diferenca = null;
+      } else {
+        diferenca = (saldoTR3 || 0) - (saldoEVO || 0);
+        if (saldoTR3 !== null && saldoEVO !== null && diferenca === 0) {
+          status = "ok";
+        } else if (saldoTR3 === 0 || saldoEVO === 0) {
+          // estoque zerado em qualquer um dos dois sistemas também conta como OK
+          status = "ok";
+        } else {
+          status = "bad";
+        }
+      }
+
+      return {
+        codigo: r.codigo,
+        descricao: r.descricao || (tr3Item && tr3Item.descricao) || (evoItem && evoItem.descricao) || "—",
+        qtdCaixa: r.qtdCaixa,
+        numCaixas: numCaixas,
+        qtdTotal: qtdTotal,
+        valorUnit: r.valorUnit,
+        valorTotal: valorTotal,
+        saldoTR3: saldoTR3,
+        saldoEVO: saldoEVO,
+        diferenca: diferenca,
+        status: status
+      };
+    });
+
+    return rows;
+  }
+
+  function dateKey(v) {
+    if (v === null || v === undefined || v === "") return "";
+    if (v instanceof Date) {
+      return v.getFullYear() + "-" + (v.getMonth() + 1) + "-" + v.getDate();
+    }
+    if (typeof v === "number") {
+      // número de série de data do Excel
+      var d = new Date(Math.round((v - 25569) * 86400 * 1000));
+      return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+    }
+    var s = String(v).trim();
+    // normaliza dd/mm/aaaa e variações com aaaa incompleto (ex.: "11/09/202")
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{3,4})$/);
+    if (m) return m[3] + "-" + m[2] + "-" + m[1];
+    return s;
+  }
+
+  function buildKPIs(data) {
+    var movs = data.movimentos || [];
+    var pos = data.posicoes || [];
+
+    var recebimentosDatas = {};
+    var transferenciasDatas = {};
+    var qtdEntrada = 0, qtdSaida = 0, valorEntrada = 0, valorSaida = 0;
+
+    movs.forEach(function (m) {
+      var tipo = String(m.tipo || "").toLowerCase();
+      var qtd = toNumber(m.qtdTotal);
+      var val = toNumber(m.valorTotal);
+      var dKey = dateKey(m.data);
+      if (tipo.indexOf("entr") >= 0) {
+        if (dKey) recebimentosDatas[dKey] = true;
+        qtdEntrada += qtd;
+        valorEntrada += val;
+      } else if (tipo.indexOf("said") >= 0 || tipo.indexOf("saíd") >= 0) {
+        if (dKey) transferenciasDatas[dKey] = true;
+        qtdSaida += qtd;
+        valorSaida += val;
+      }
+    });
+
+    var recebimentos = Object.keys(recebimentosDatas).length;
+    var transferencias = Object.keys(transferenciasDatas).length;
+
+    var totalUnidEstoque = qtdEntrada - qtdSaida;
+    var valorTotalEstoque = valorEntrada - valorSaida;
+    var pctRetiradas = qtdEntrada > 0 ? (qtdSaida / qtdEntrada) * 100 : 0;
+    var pctEstoque = qtdEntrada > 0 ? (totalUnidEstoque / qtdEntrada) * 100 : 0;
+
+    var posSet = {};
+    pos.forEach(function (p) {
+      var key = p.posicao || (String(p.rua || "") + "-" + String(p.fileira || "") + "-" + String(p.andar || ""));
+      if (key) posSet[key] = true;
+    });
+    var posicoesUnicas = Object.keys(posSet).length;
+
+    return {
+      recebimentos: recebimentos,
+      transferencias: transferencias,
+      qtdEntrada: qtdEntrada,
+      valorEntrada: valorEntrada,
+      qtdSaida: qtdSaida,
+      valorSaida: valorSaida,
+      pctRetiradas: pctRetiradas,
+      totalUnidEstoque: totalUnidEstoque,
+      valorTotalEstoque: valorTotalEstoque,
+      pctEstoque: pctEstoque,
+      posicoesUnicas: posicoesUnicas
+    };
+  }
+
+  // ---------- render ----------
+  function renderKPIs(k) {
+    var cards = [
+      { label: "Recebimentos", value: fmtInt(k.recebimentos), caption: "dias com entrada registrada" },
+      { label: "Transferências", value: fmtInt(k.transferencias), caption: "dias com saída registrada" },
+      { label: "QTD Entrada unit.", value: fmtInt(k.qtdEntrada), caption: "unidades recebidas" },
+      { label: "Valor Entrada", value: fmtMoney(k.valorEntrada), caption: "total recebido", cls: "amber" },
+      { label: "QTD Saída unit.", value: fmtInt(k.qtdSaida), caption: "unidades expedidas" },
+      { label: "Valor Saída", value: fmtMoney(k.valorSaida), caption: "total expedido", cls: "red" },
+      { label: "% Retiradas", value: fmtPct(k.pctRetiradas), caption: "saída sobre entrada" },
+      { label: "Total de unid. em estoque", value: fmtInt(k.totalUnidEstoque), caption: "entrada − saída" },
+      { label: "Valor Total estoque", value: fmtMoney(k.valorTotalEstoque), caption: "estoque valorizado", cls: "green" },
+      { label: "% Estoque", value: fmtPct(k.pctEstoque), caption: "estoque sobre recebido" },
+      { label: "Posições paletes", value: fmtInt(k.posicoesUnicas), caption: "posições únicas ocupadas" }
+    ];
+    var grid = document.getElementById("kpiGrid");
+    grid.innerHTML = cards.map(function (c) {
+      return '<div class="kpi ' + (c.cls || "") + '">' +
+        '<div class="label">' + c.label + '</div>' +
+        '<div class="value">' + c.value + '</div>' +
+        '<div class="caption">' + c.caption + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  function statusPill(status) {
+    if (status === "ok") return '<span class="pill ok">OK</span>';
+    if (status === "bad") return '<span class="pill bad">Divergência</span>';
+    return '<span class="pill none">Sem referência</span>';
+  }
+
+  function renderTable(rows) {
+    var search = normHeader(document.getElementById("searchInput").value);
+    var statusFilter = document.getElementById("statusFilter").value;
+
+    var filtered = rows.filter(function (r) {
+      if (statusFilter !== "todos" && r.status !== statusFilter) return false;
+      if (!search) return true;
+      var hay = normHeader(String(r.codigo) + " " + String(r.descricao));
+      return hay.indexOf(search) >= 0;
+    });
+
+    var body = document.getElementById("tableBody");
+    if (filtered.length === 0) {
+      body.innerHTML = '<tr class="empty-row"><td colspan="11">Nenhum código encontrado para esse filtro.</td></tr>';
+    } else {
+      body.innerHTML = filtered.map(function (r) {
+        return "<tr>" +
+          '<td class="codigo">' + escapeHtml(r.codigo) + "</td>" +
+          "<td>" + escapeHtml(r.descricao) + "</td>" +
+          '<td class="num">' + fmtInt(r.qtdCaixa) + "</td>" +
+          '<td class="num">' + fmtDec(r.numCaixas, 1) + "</td>" +
+          '<td class="num">' + fmtInt(r.qtdTotal) + "</td>" +
+          '<td class="num">' + fmtMoney(r.valorUnit) + "</td>" +
+          '<td class="num">' + fmtMoney(r.valorTotal) + "</td>" +
+          '<td class="num">' + (r.saldoTR3 === null ? "—" : fmtInt(r.saldoTR3)) + "</td>" +
+          '<td class="num">' + (r.saldoEVO === null ? "—" : fmtInt(r.saldoEVO)) + "</td>" +
+          '<td class="num">' + (r.diferenca === null ? "—" : fmtInt(r.diferenca)) + "</td>" +
+          "<td>" + statusPill(r.status) + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+
+    var okCount = rows.filter(function (r) { return r.status === "ok"; }).length;
+    var badCount = rows.filter(function (r) { return r.status === "bad"; }).length;
+    document.getElementById("rowCountLabel").textContent =
+      filtered.length + " de " + rows.length + " códigos · " + okCount + " OK · " + badCount + " divergência(s)";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function refreshAll() {
+    currentRows = buildValidationRows(currentData);
+    currentKPIs = buildKPIs(currentData);
+    renderKPIs(currentKPIs);
+    renderTable(currentRows);
+    document.getElementById("badgeFileName").textContent = currentFileLabel;
+  }
+
+  // ---------- upload de novo arquivo ----------
+  function findSheet(wb, keywords) {
+    var names = wb.SheetNames;
+    for (var i = 0; i < names.length; i++) {
+      var n = normHeader(names[i]);
+      for (var k = 0; k < keywords.length; k++) {
+        if (n.indexOf(keywords[k]) >= 0) return wb.Sheets[names[i]];
+      }
+    }
+    return null;
+  }
+
+  function sheetToRows(sheet) {
+    if (!sheet) return [];
+    return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+  }
+
+  function findHeaderRow(rows, requiredKeywords) {
+    for (var i = 0; i < Math.min(rows.length, 8); i++) {
+      var row = rows[i] || [];
+      var normed = row.map(normHeader);
+      var hits = 0;
+      requiredKeywords.forEach(function (kw) {
+        if (normed.some(function (h) { return h.indexOf(kw) >= 0; })) hits++;
+      });
+      if (hits >= Math.min(2, requiredKeywords.length)) return i;
+    }
+    return -1;
+  }
+
+  function colIndex(headerRow, keywords) {
+    var normed = headerRow.map(normHeader);
+    for (var k = 0; k < keywords.length; k++) {
+      for (var i = 0; i < normed.length; i++) {
+        if (normed[i].indexOf(keywords[k]) >= 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  function parseMovimentos(wb) {
+    var sheet = findSheet(wb, ["movimento"]);
+    var rows = sheetToRows(sheet);
+    var hIdx = findHeaderRow(rows, ["nossocodigo", "descricao", "quantidadetotal"]);
+    if (hIdx < 0) return [];
+    var header = rows[hIdx];
+    var cCodigo = colIndex(header, ["nossocodigo"]);
+    var cDesc = colIndex(header, ["descricao"]);
+    var cQtdCaixa = colIndex(header, ["quantidadeporcaixa"]);
+    var cNumCaixas = colIndex(header, ["numerodecaixas", "numdecaixas"]);
+    var cQtdTotal = colIndex(header, ["quantidadetotal"]);
+    var cValorUnit = colIndex(header, ["valorunit"]);
+    var cValorTotal = colIndex(header, ["valortotal"]);
+    var cTipo = colIndex(header, ["movimentos", "movimento", "tipo"]);
+    var out = [];
+    for (var i = hIdx + 1; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r || r[cCodigo] === null || r[cCodigo] === undefined || r[cCodigo] === "") continue;
+      out.push({
+        codigo: r[cCodigo],
+        descricao: cDesc >= 0 ? r[cDesc] : "",
+        qtdCaixa: cQtdCaixa >= 0 ? r[cQtdCaixa] : 0,
+        numCaixas: cNumCaixas >= 0 ? r[cNumCaixas] : 0,
+        qtdTotal: cQtdTotal >= 0 ? r[cQtdTotal] : 0,
+        valorUnit: cValorUnit >= 0 ? r[cValorUnit] : 0,
+        valorTotal: cValorTotal >= 0 ? r[cValorTotal] : 0,
+        tipo: cTipo >= 0 ? r[cTipo] : ""
+      });
+    }
+    return out;
+  }
+
+  function parseTR3(wb) {
+    var sheet = findSheet(wb, ["saldotr3", "tr3"]);
+    var rows = sheetToRows(sheet);
+    var hIdx = findHeaderRow(rows, ["codigo", "descricao", "saldo"]);
+    if (hIdx < 0) return [];
+    var header = rows[hIdx];
+    var cCodigo = colIndex(header, ["codigo"]);
+    var cDesc = colIndex(header, ["descricao"]);
+    var cSaldo = colIndex(header, ["saldodisponivel", "saldo"]);
+    var out = [];
+    for (var i = hIdx + 1; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r || r[cCodigo] === null || r[cCodigo] === undefined || r[cCodigo] === "") continue;
+      out.push({ codigo: r[cCodigo], descricao: cDesc >= 0 ? r[cDesc] : "", saldo: cSaldo >= 0 ? r[cSaldo] : 0 });
+    }
+    return out;
+  }
+
+  function parseEVO(wb) {
+    var sheet = findSheet(wb, ["saldoevo", "evo"]);
+    var rows = sheetToRows(sheet);
+    var hIdx = findHeaderRow(rows, ["referencia", "codigo", "saldo"]);
+    if (hIdx < 0) return [];
+    var header = rows[hIdx];
+    var cCodigo = colIndex(header, ["referencia", "codigo"]);
+    var cDesc = colIndex(header, ["descricao"]);
+    var cSaldo = colIndex(header, ["saldo"]);
+    var out = [];
+    for (var i = hIdx + 1; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r || r[cCodigo] === null || r[cCodigo] === undefined || r[cCodigo] === "") continue;
+      out.push({ codigo: r[cCodigo], descricao: cDesc >= 0 ? r[cDesc] : "", saldo: cSaldo >= 0 ? r[cSaldo] : 0 });
+    }
+    return out;
+  }
+
+  function parsePosicoes(wb) {
+    var sheet = findSheet(wb, ["posicoespaletes", "posicoes", "paletes"]);
+    var rows = sheetToRows(sheet);
+    var hIdx = findHeaderRow(rows, ["item", "posicoes", "rua"]);
+    if (hIdx < 0) return [];
+    var header = rows[hIdx];
+    var cRua = colIndex(header, ["rua"]);
+    var cFileira = colIndex(header, ["fileira"]);
+    var cAndar = colIndex(header, ["andar"]);
+    var cItem = colIndex(header, ["item"]);
+    var cPos = colIndex(header, ["posicoes", "posicao"]);
+    var out = [];
+    for (var i = hIdx + 1; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r || cItem < 0 || r[cItem] === null || r[cItem] === undefined || r[cItem] === "") continue;
+      out.push({
+        rua: cRua >= 0 ? r[cRua] : "",
+        fileira: cFileira >= 0 ? r[cFileira] : "",
+        andar: cAndar >= 0 ? r[cAndar] : "",
+        codigo: r[cItem],
+        posicao: cPos >= 0 ? r[cPos] : ((cRua >= 0 ? r[cRua] : "") + "-" + (cFileira >= 0 ? r[cFileira] : "") + "-" + (cAndar >= 0 ? r[cAndar] : ""))
+      });
+    }
+    return out;
+  }
+
+  function showBanner(msg, ok) {
+    var b = document.getElementById("statusBanner");
+    b.textContent = msg;
+    b.className = "status-banner show " + (ok ? "success" : "error");
+  }
+
+  function processWorkbook(wb, fileName) {
+    var movimentos = parseMovimentos(wb);
+    var tr3 = parseTR3(wb);
+    var evo = parseEVO(wb);
+    var posicoes = parsePosicoes(wb);
+
+    if (movimentos.length === 0 && tr3.length === 0 && evo.length === 0) {
+      showBanner("Não foi possível localizar as abas esperadas (Movimentos, Saldo TR3, Saldo EVO) nesse arquivo. Verifique se o modelo é o mesmo.", false);
+      return;
+    }
+
+    currentData = { movimentos: movimentos, tr3: tr3, evo: evo, posicoes: posicoes };
+    currentFileLabel = fileName;
+    document.getElementById("badgeSourceLabel").textContent = "Novo arquivo carregado";
+    document.getElementById("sourceTagText").textContent = "Exibindo dados de " + fileName;
+    refreshAll();
+    showBanner("Arquivo processado: " + movimentos.length + " movimentos, " + tr3.length + " itens no TR3, " + evo.length + " itens no EVO, " + posicoes.length + " posições lidas.", true);
+  }
+
+  // ---------- wiring de UI ----------
+  document.addEventListener("DOMContentLoaded", function () {
+    refreshAll();
+
+    document.getElementById("searchInput").addEventListener("input", function () { renderTable(currentRows); });
+    document.getElementById("statusFilter").addEventListener("change", function () { renderTable(currentRows); });
+
+    var dropzone = document.getElementById("dropzone");
+    var fileInput = document.getElementById("fileInput");
+    var processBtn = document.getElementById("processBtn");
+    var fileStatus = document.getElementById("fileStatus");
+    var pendingFile = null;
+
+    dropzone.addEventListener("click", function () { fileInput.click(); });
+    dropzone.addEventListener("dragover", function (e) { e.preventDefault(); dropzone.classList.add("drag"); });
+    dropzone.addEventListener("dragleave", function () { dropzone.classList.remove("drag"); });
+    dropzone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dropzone.classList.remove("drag");
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        pendingFile = e.dataTransfer.files[0];
+        fileStatus.textContent = "Selecionado: " + pendingFile.name;
+        processBtn.disabled = false;
+      }
+    });
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files && fileInput.files[0]) {
+        pendingFile = fileInput.files[0];
+        fileStatus.textContent = "Selecionado: " + pendingFile.name;
+        processBtn.disabled = false;
+      }
+    });
+
+    processBtn.addEventListener("click", function () {
+      if (!pendingFile) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          var wb = XLSX.read(data, { type: "array" });
+          processWorkbook(wb, pendingFile.name);
+        } catch (err) {
+          showBanner("Erro ao ler o arquivo: " + err.message, false);
+        }
+      };
+      reader.readAsArrayBuffer(pendingFile);
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      currentData = EMBEDDED_DATA;
+      currentFileLabel = "Saldo - BILISC - atual.xlsx";
+      pendingFile = null;
+      processBtn.disabled = true;
+      fileStatus.textContent = "Nenhum arquivo selecionado.";
+      document.getElementById("badgeSourceLabel").textContent = "Arquivo carregado";
+      document.getElementById("sourceTagText").textContent = "Exibindo dados do arquivo enviado nesta conversa";
+      document.getElementById("statusBanner").className = "status-banner";
+      refreshAll();
+    });
+  });
+})();
+
+</script>
+</body>
+</html>
